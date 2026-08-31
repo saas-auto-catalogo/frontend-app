@@ -17,6 +17,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
+import { XmlMapperStudio } from './components/xml-mapper/XmlMapperStudio.js';
+
 const SAMPLE_VEHICLES = [
   {
     id: 'mercedes-glc-300',
@@ -344,6 +346,13 @@ export function App() {
           {activeTab === 'issues' && (
             <div className="space-y-6">
               <PendingIssuesTable />
+            </div>
+          )}
+
+          {/* TAB 5: MAPEADOR INTELIGENTE XML (DE/PARA) */}
+          {activeTab === 'xml-mapper' && (
+            <div className="space-y-6">
+              <XmlMapperStudio />
             </div>
           )}
 

@@ -42,6 +42,11 @@ export function Sidebar({
       highlight: true,
     },
     {
+      id: 'xml-mapper',
+      label: 'Mapeador XML De/Para',
+      icon: <Sliders className="w-4 h-4 text-brand-primary" />,
+    },
+    {
       id: 'issues',
       label: 'Pendências & Alertas',
       icon: <AlertTriangle className="w-4 h-4" />,
