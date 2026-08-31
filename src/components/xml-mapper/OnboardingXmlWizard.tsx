@@ -170,7 +170,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
                 Detectamos o formato compatível com o seu sistema:
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {DMS_PRESETS.slice(0, 6).map((preset) => {
+                {DMS_PRESETS.slice(0, 6).map((preset: DmsPreset) => {
                   const isSelected = selectedPreset.id === preset.id;
                   return (
                     <div

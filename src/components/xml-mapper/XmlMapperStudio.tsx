@@ -12,6 +12,7 @@ import {
   Compass,
   Sliders
 } from 'lucide-react';
+import { xmlMapperService, MappingRuleDto } from '../../services/api/xmlMapperService.js';
 
 export interface FieldMappingRule {
   id: string;
@@ -19,7 +20,7 @@ export interface FieldMappingRule {
   metaLabel: string;
   sourceTag: string;
   isRequired: boolean;
-  transformType: 'DIRECT' | 'BRL_CURRENCY' | 'INT_KM' | 'HTTPS_IMAGE' | 'ENUM_PROPULSION' | 'ENUM_TRANSMISSION' | 'COMPUTED_YEAR';
+  transformType: string;
   confidence: number;
 }
 
@@ -55,8 +56,27 @@ export function XmlMapperStudio() {
   const [mappings, setMappings] = useState<FieldMappingRule[]>(INITIAL_MAPPINGS['autocerto']);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSelectPreset = (preset: DmsPreset) => {
+  const handleSelectPreset = async (preset: DmsPreset) => {
     setSelectedPreset(preset);
+    try {
+      const apiRules = await xmlMapperService.getMappings(preset.id);
+      if (apiRules && apiRules.length > 0) {
+        setMappings(
+          apiRules.map((r: MappingRuleDto) => ({
+            id: r.id,
+            metaField: r.metaField,
+            metaLabel: r.metaDescription || r.metaField,
+            sourceTag: r.sourceTag,
+            isRequired: r.required,
+            transformType: r.transformType,
+            confidence: r.confidence,
+          }))
+        );
+        return;
+      }
+    } catch {
+      // Fallback local
+    }
     const rules = INITIAL_MAPPINGS[preset.id] || INITIAL_MAPPINGS['autocerto'];
     setMappings(rules);
   };
@@ -67,12 +87,27 @@ export function XmlMapperStudio() {
     );
   };
 
-  const handleSaveMapping = () => {
-    setIsSaving(true);
-    setTimeout(() => {
+  const handleSaveMapping = async () => {
+    try {
+      setIsSaving(true);
+      const payload: MappingRuleDto[] = mappings.map((m) => ({
+        id: m.id,
+        metaField: m.metaField,
+        metaDescription: m.metaLabel,
+        sourceTag: m.sourceTag,
+        transformType: m.transformType,
+        required: m.isRequired,
+        confidence: m.confidence,
+        sampleValue: '',
+      }));
+
+      const res = await xmlMapperService.saveMappings(selectedPreset.id, payload);
+      alert(`✅ ${res.message}`);
+    } catch (err: any) {
+      alert(`❌ Erro ao salvar mapeamento: ${err.message}`);
+    } finally {
       setIsSaving(false);
-      alert(`✅ Mapeamento De/Para para '${selectedPreset.name}' salvo com sucesso no banco de dados!`);
-    }, 900);
+    }
   };
 
   if (isWizardMode) {
@@ -101,60 +136,74 @@ export function XmlMapperStudio() {
 
   return (
     <div className="space-y-6">
-      {/* Banner de Alternância para o Wizard */}
-      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-subtle">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-            <Compass className="w-5 h-5 text-blue-300" />
+      {/* Banner de Acesso Rápido ao Wizard Guiado de Onboarding */}
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-xl p-5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
+              Novo Integrador?
+            </span>
+            <span className="text-xs text-blue-100">Configuração Guiada em 3 Passos</span>
           </div>
-          <div>
-            <h4 className="text-sm font-bold">Assistente de Conexão Rápida de Estoque</h4>
-            <p className="text-xs text-blue-200">
-              Configure sua loja em 3 etapas guiadas com auto-detecção de campos.
-            </p>
-          </div>
+          <h3 className="text-base font-bold">Wizard de Conexão XML da Revenda</h3>
+          <p className="text-xs text-blue-100 max-w-xl">
+            Insira o link XML do seu estoque e deixe a inteligência do Auto Catálogo mapear automaticamente todas as tags para o Meta Automotive Ads.
+          </p>
         </div>
 
-        <button
+        <Button
+          variant="primary"
+          size="md"
+          icon={<Compass className="w-4 h-4" />}
+          className="bg-white text-blue-700 hover:bg-blue-50 font-bold shrink-0 shadow"
           onClick={() => setIsWizardMode(true)}
-          className="px-4 py-2 bg-white text-brand-primary font-bold text-xs rounded-lg hover:bg-blue-50 transition-all flex items-center gap-1.5 shadow-sm shrink-0"
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Iniciar Wizard de Onboarding</span>
-        </button>
+          Iniciar Wizard de Onboarding
+        </Button>
       </div>
-      {/* Seletor de Presets do DMS */}
+
+      {/* 1. Card do Gestor de Estoque Conectado */}
       <DmsPresetSelector
         selectedPresetId={selectedPreset.id}
         onSelectPreset={handleSelectPreset}
       />
 
-      {/* Grade Principal: Mapeador De/Para + Preview Lado a Lado */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Coluna Esquerda: Grid de Mapeamento (7 cols) */}
+      {/* 2. Grid de Conteúdo: Matriz De/Para (7 cols) + Preview Lado a Lado (5 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Coluna Esquerda: Matriz de Mapeamento (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
           <Card className="overflow-hidden">
-            <CardHeader className="flex items-center justify-between py-3.5 bg-surface-muted/30">
+            <CardHeader className="flex items-center justify-between py-4 bg-surface-muted/30">
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-typography-heading">
-                    Regras de Mapeamento De/Para
-                  </h3>
-                  <Badge variant="primary" size="sm">
-                    {selectedPreset.name}
+                <h3 className="text-sm font-bold text-typography-heading flex items-center gap-2">
+                  <span>Matriz de Correspondência De/Para</span>
+                  <Badge variant="available" size="sm" dot>
+                    Schema Meta DAA
                   </Badge>
-                </div>
+                </h3>
                 <p className="text-xs text-typography-muted mt-0.5">
-                  Associação das tags do XML de entrada para as chaves canônicas do Meta Ads DAA.
+                  Regras de transformação aplicadas em tempo real durante a ingestão do XML.
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" icon={<RotateCcw className="w-3.5 h-3.5" />} onClick={() => handleSelectPreset(selectedPreset)}>
-                  Resetar
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={<RotateCcw className="w-3.5 h-3.5" />}
+                  onClick={() => handleSelectPreset(selectedPreset)}
+                >
+                  Restaurar
                 </Button>
-                <Button variant="primary" size="sm" icon={<Save className="w-3.5 h-3.5" />} onClick={handleSaveMapping} loading={isSaving}>
-                  Salvar
+
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={<Save className="w-3.5 h-3.5" />}
+                  onClick={handleSaveMapping}
+                  loading={isSaving}
+                >
+                  Salvar Mapeamento
                 </Button>
               </div>
             </CardHeader>
@@ -164,33 +213,33 @@ export function XmlMapperStudio() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-surface-muted/60 border-b border-surface-border text-[11px] font-bold text-typography-muted uppercase tracking-wider">
-                      <th className="py-2.5 px-4">Tag Canônica Meta Ads</th>
-                      <th className="py-2.5 px-4">Tag de Origem DMS</th>
-                      <th className="py-2.5 px-4">Transformação</th>
-                      <th className="py-2.5 px-4">Match IA</th>
+                      <th className="py-3 px-4">Campo Meta Automotive DAA</th>
+                      <th className="py-3 px-4">Tag Origem ({selectedPreset.name})</th>
+                      <th className="py-3 px-4">Transformação</th>
+                      <th className="py-3 px-4">Confiança IA</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-border text-xs">
                     {mappings.map((rule) => (
-                      <tr key={rule.id} className="hover:bg-blue-50/20 transition-colors">
+                      <tr key={rule.id} className="hover:bg-surface-muted/30 transition-colors">
                         {/* Campo Canônico Meta */}
                         <td className="py-3 px-4">
                           <div>
-                            <span className="font-mono text-xs font-bold text-brand-primary bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                              {rule.metaField}
-                            </span>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <span className="text-xs text-typography-body font-medium">{rule.metaLabel}</span>
-                              {rule.isRequired ? (
-                                <span className="text-[10px] text-brand-price font-bold">*Obrigatório</span>
-                              ) : (
-                                <span className="text-[10px] text-typography-subtle">Opcional</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-semibold text-brand-primary">
+                                &lt;{rule.metaField}&gt;
+                              </span>
+                              {rule.isRequired && (
+                                <span className="text-[9px] bg-red-50 text-brand-price border border-red-200 font-bold px-1.5 py-0.2 rounded">
+                                  Obrigatório
+                                </span>
                               )}
                             </div>
+                            <p className="text-[11px] text-typography-muted mt-0.5">{rule.metaLabel}</p>
                           </div>
                         </td>
 
-                        {/* Tag de Entrada DMS (Editável) */}
+                        {/* Tag Origem do DMS (Editável) */}
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-1.5">
                             <span className="text-typography-subtle font-mono">&lt;</span>

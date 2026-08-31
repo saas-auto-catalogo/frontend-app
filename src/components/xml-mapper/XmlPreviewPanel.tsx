@@ -13,6 +13,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useState } from 'react';
+import { xmlMapperService } from '../../services/api/xmlMapperService.js';
 
 export interface XmlPreviewPanelProps {
   onValidate?: () => void;
@@ -36,13 +37,17 @@ export function XmlPreviewPanel({
     imageUrl: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80',
   };
 
-  const handleTestMapping = () => {
-    setIsValidating(true);
-    setTimeout(() => {
-      setIsValidating(false);
+  const handleTestMapping = async () => {
+    try {
+      setIsValidating(true);
+      const res = await xmlMapperService.testMapping(sampleVehicle);
       if (onValidate) onValidate();
-      alert('🎉 Validação Comercial Concluída: Os dados do veículo foram transformados com sucesso e estão 100% elegíveis para os Anúncios do Meta Ads!');
-    }, 700);
+      alert(`🎉 ${res.message}`);
+    } catch (err: any) {
+      alert(`❌ Erro na validação: ${err.message}`);
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   return (
@@ -151,7 +156,7 @@ export function XmlPreviewPanel({
           </div>
         </div>
 
-        {/* Bloco Opcional Retrátil para Ver XML Técnico (Somente se solicitado) */}
+        {/* Bloco Opcional Retrátil para Ver XML Técnico */}
         <div>
           <button
             onClick={() => setShowRawXml(!showRawXml)}

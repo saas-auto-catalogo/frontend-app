@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, Server, ChevronDown, Check, ArrowLeftRight } from 'lucide-react';
 import { Badge } from '../ui/Badge.js';
+import { xmlMapperService, DmsPresetDto } from '../../services/api/xmlMapperService.js';
 
 export interface DmsPreset {
   id: string;
@@ -71,8 +72,27 @@ export function DmsPresetSelector({
   selectedPresetId,
   onSelectPreset,
 }: DmsPresetSelectorProps) {
+  const [presets, setPresets] = useState<DmsPresetDto[]>([]);
   const [isChangingDms, setIsChangingDms] = useState(false);
-  const currentPreset = DMS_PRESETS.find((p) => p.id === selectedPresetId) || DMS_PRESETS[0];
+
+  useEffect(() => {
+    async function loadPresets() {
+      const items = await xmlMapperService.getPresets();
+      setPresets(items);
+    }
+    loadPresets();
+  }, []);
+
+  const currentPreset =
+    presets.find((p) => p.id === selectedPresetId) ||
+    presets[0] || {
+      id: 'autocerto',
+      name: 'AutoCerto XML',
+      provider: 'AutoCerto Sistemas',
+      confidenceRate: 99.8,
+      detectedRootTag: '<veiculos><veiculo>',
+      endpointExample: 'https://integrador.autocerto.com/feed/loja123/estoque.xml',
+    };
 
   return (
     <div className="bg-surface-card rounded-xl border border-surface-border p-5 shadow-subtle space-y-4">
@@ -129,7 +149,7 @@ export function DmsPresetSelector({
             Selecione o novo sistema DMS da sua concessionária para carregar o modelo de De/Para correspondente:
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            {DMS_PRESETS.map((preset) => {
+            {presets.map((preset) => {
               const isSelected = selectedPresetId === preset.id;
               return (
                 <button
