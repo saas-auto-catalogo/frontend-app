@@ -226,9 +226,9 @@ export function XmlMapperStudio() {
           </Card>
         </div>
 
-        {/* Coluna Direita: Preview Lado a Lado (5 cols) */}
-        <div className="lg:col-span-5">
-          <XmlPreviewPanel dmsName={selectedPreset.name} />
+        {/* Coluna Direita: Preview Visual Amigável do Veículo Transformado (5 cols) */}
+        <div className="lg:col-span-5 sticky top-20">
+          <XmlPreviewPanel />
         </div>
       </div>
     </div>
