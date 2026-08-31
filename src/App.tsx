@@ -5,19 +5,17 @@ import { MetricCard } from './components/ui/MetricCard.js';
 import { MetaConnectionCard } from './components/dashboard/MetaConnectionCard.js';
 import { PendingIssuesTable } from './components/dashboard/PendingIssuesTable.js';
 import { ActivityTimeline } from './components/dashboard/ActivityTimeline.js';
-import { VehicleCard } from './components/ui/VehicleCard.js';
 import { Button } from './components/ui/Button.js';
 import {
   Car,
   RefreshCw,
-  Search,
-  SlidersHorizontal,
   CheckCircle2,
   AlertTriangle,
   ShieldCheck,
 } from 'lucide-react';
 
 import { XmlMapperStudio } from './components/xml-mapper/XmlMapperStudio.js';
+import { InventoryManager } from './components/inventory/InventoryManager.js';
 
 const SAMPLE_VEHICLES = [
   {
@@ -134,8 +132,6 @@ const SAMPLE_VEHICLES = [
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'AVAILABLE' | 'HYBRID_EV' | 'SOLD'>('ALL');
 
   const handleTriggerSync = () => {
     setIsSyncing(true);
@@ -144,22 +140,6 @@ export function App() {
       alert('✅ Sincronização com o DMS e Meta Ads concluída com sucesso! Feed atualizado.');
     }, 1500);
   };
-
-  const filteredVehicles = SAMPLE_VEHICLES.filter((v) => {
-    const matchesSearch =
-      v.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.version.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.licensePlate?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    if (!matchesSearch) return false;
-
-    if (selectedFilter === 'AVAILABLE') return v.status === 'AVAILABLE';
-    if (selectedFilter === 'SOLD') return v.status === 'SOLD';
-    if (selectedFilter === 'HYBRID_EV') return v.fuelType.includes('Híbrido') || v.fuelType.includes('Elétrico');
-
-    return true;
-  });
 
   return (
     <div className="min-h-screen flex bg-surface-canvas text-typography-body">
@@ -240,94 +220,10 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 2: ESTOQUE DE VEÍCULOS */}
+          {/* TAB 2: GESTÃO DE ESTOQUE & SIMULADOR META ADS */}
           {activeTab === 'inventory' && (
             <div className="space-y-6">
-              {/* Barra de Filtros & Busca */}
-              <section className="bg-surface-card rounded-lg border border-surface-border p-4 shadow-subtle flex flex-col sm:flex-row gap-4 items-center justify-between">
-                <div className="relative w-full sm:w-96">
-                  <Search className="w-4 h-4 text-typography-subtle absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Buscar por marca, modelo, versão ou placa..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-surface-muted/50 border border-surface-border rounded-md text-sm text-typography-body placeholder:text-typography-subtle focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
-                  />
-                </div>
-
-                <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-                  <button
-                    onClick={() => setSelectedFilter('ALL')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
-                      selectedFilter === 'ALL'
-                        ? 'bg-brand-primary text-white shadow-sm'
-                        : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
-                    }`}
-                  >
-                    Todos ({SAMPLE_VEHICLES.length})
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedFilter('AVAILABLE')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
-                      selectedFilter === 'AVAILABLE'
-                        ? 'bg-brand-accent text-white shadow-sm'
-                        : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
-                    }`}
-                  >
-                    Em Estoque ({SAMPLE_VEHICLES.filter((v) => v.status === 'AVAILABLE').length})
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedFilter('HYBRID_EV')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
-                      selectedFilter === 'HYBRID_EV'
-                        ? 'bg-brand-primary text-white shadow-sm'
-                        : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
-                    }`}
-                  >
-                    Híbridos & Elétricos (3)
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedFilter('SOLD')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
-                      selectedFilter === 'SOLD'
-                        ? 'bg-slate-800 text-white shadow-sm'
-                        : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
-                    }`}
-                  >
-                    Vendidos ({SAMPLE_VEHICLES.filter((v) => v.status === 'SOLD').length})
-                  </button>
-                </div>
-              </section>
-
-              {/* Grade de Cards de Veículos */}
-              <section>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base font-bold text-typography-heading flex items-center gap-2">
-                    <span>Veículos em Catálogo</span>
-                    <span className="text-xs font-normal text-typography-muted">
-                      ({filteredVehicles.length} de {SAMPLE_VEHICLES.length} listados)
-                    </span>
-                  </h2>
-
-                  <Button variant="ghost" size="sm" icon={<SlidersHorizontal className="w-3.5 h-3.5" />}>
-                    Filtrar por Preço
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredVehicles.map((vehicle) => (
-                    <VehicleCard
-                      key={vehicle.id}
-                      {...vehicle}
-                      onViewDetails={(id) => alert(`Visualizando detalhes do anúncio ${id}`)}
-                    />
-                  ))}
-                </div>
-              </section>
+              <InventoryManager initialVehicles={SAMPLE_VEHICLES} />
             </div>
           )}
 
