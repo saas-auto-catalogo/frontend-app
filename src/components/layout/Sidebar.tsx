@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Radio
 } from 'lucide-react';
-import { Badge } from '../ui/Badge.js';
 
 export interface SidebarProps {
   activeTab: string;
@@ -70,35 +69,35 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 select-none min-h-screen">
+    <aside className="w-64 bg-gradient-to-b from-[#0037B0] via-[#002F99] to-[#002270] text-white flex flex-col shrink-0 border-r border-blue-900 select-none min-h-screen shadow-xl">
       {/* Brand Logo & SaaS Name */}
-      <div className="h-16 px-5 flex items-center gap-3 border-b border-slate-800 bg-slate-950/40">
-        <div className="w-9 h-9 rounded-lg bg-brand-primary flex items-center justify-center text-white shadow-md">
+      <div className="h-16 px-5 flex items-center gap-3 border-b border-white/10 bg-black/10">
+        <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center text-[#0037B0] shadow-md font-bold">
           <Car className="w-5 h-5" />
         </div>
         <div>
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-base text-white tracking-tight">Auto Catálogo</span>
           </div>
-          <p className="text-[10px] text-slate-400 font-mono">SaaS Enterprise v1.0</p>
+          <p className="text-[10px] text-blue-200 font-mono">SaaS Enterprise v1.0</p>
         </div>
       </div>
 
       {/* Loja / Tenant Ativo */}
-      <div className="p-3 mx-3 my-3 bg-slate-800/60 rounded-lg border border-slate-700/50 flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-md bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs">
+      <div className="p-3 mx-3 my-3 bg-white/10 rounded-lg border border-white/15 flex items-center gap-2.5 backdrop-blur-sm">
+        <div className="w-7 h-7 rounded-md bg-white/20 text-white flex items-center justify-center font-bold text-xs">
           AE
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-white truncate">Auto Elite Motors</p>
-          <p className="text-[10px] text-slate-400 truncate">Matriz Jardins • SP</p>
+          <p className="text-[10px] text-blue-200 truncate">Matriz Jardins • SP</p>
         </div>
-        <Radio className="w-3.5 h-3.5 text-brand-accent animate-pulse shrink-0" />
+        <Radio className="w-3.5 h-3.5 text-green-300 animate-pulse shrink-0" />
       </div>
 
       {/* Menu Navigation */}
       <div className="flex-1 px-3 py-2 space-y-1">
-        <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-200">
           Menu Principal
         </div>
 
@@ -108,14 +107,14 @@ export function Sidebar({
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-all duration-150 group ${
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-150 group ${
                 isActive
-                  ? 'bg-brand-primary text-white font-semibold shadow-sm'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-white text-[#0037B0] font-bold shadow-md translate-x-0.5'
+                  : 'text-blue-100 hover:bg-white/10 hover:text-white'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <span className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}>
+                <span className={isActive ? 'text-[#0037B0]' : 'text-blue-200 group-hover:text-white'}>
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
@@ -129,12 +128,14 @@ export function Sidebar({
                 ) : null}
 
                 {item.badge ? (
-                  <span className="bg-slate-800 text-slate-300 text-[10px] px-1.5 py-0.5 rounded">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    isActive ? 'bg-blue-100 text-[#0037B0]' : 'bg-white/15 text-blue-100'
+                  }`}>
                     {item.badge}
                   </span>
                 ) : null}
 
-                {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/70" />}
+                {isActive && <ChevronRight className="w-3.5 h-3.5 text-[#0037B0]" />}
               </div>
             </button>
           );
@@ -142,18 +143,20 @@ export function Sidebar({
       </div>
 
       {/* Meta Commerce Status Mini-Widget */}
-      <div className="p-4 m-3 bg-gradient-to-br from-slate-800/80 to-slate-900 border border-slate-700/60 rounded-xl space-y-2">
+      <div className="p-4 m-3 bg-black/20 border border-white/15 rounded-xl space-y-2 backdrop-blur-sm">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-400 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-brand-accent" />
+          <span className="text-blue-100 flex items-center gap-1.5 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-green-300" />
             Meta Commerce
           </span>
-          <Badge variant="available" size="sm">Online</Badge>
+          <span className="text-[10px] font-bold bg-green-500/20 text-green-300 border border-green-400/30 px-1.5 py-0.2 rounded-full">
+            Online
+          </span>
         </div>
-        <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
-          <div className="bg-brand-accent h-full w-[97.2%]" />
+        <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
+          <div className="bg-green-400 h-full w-[97.2%]" />
         </div>
-        <p className="text-[11px] text-slate-400">97.2% veículos elegíveis</p>
+        <p className="text-[11px] text-blue-200">97.2% veículos elegíveis</p>
       </div>
     </aside>
   );
