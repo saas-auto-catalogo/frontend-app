@@ -3,7 +3,7 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'accent' | 'outline' | 'ghost';
+  variant?: 'primary' | 'price' | 'accent' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
@@ -24,14 +24,14 @@ export function Button({
   const baseStyles = 'inline-flex items-center justify-center font-medium rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98]';
 
   const variants = {
-    // Vermelho Webmotors (Ação Principal / CTA)
+    // Azul Cobalto Saga / Tech Pro (Ação Principal do SaaS)
     primary: 'bg-brand-primary text-white hover:bg-brand-primaryHover focus:ring-brand-primary shadow-sm',
-    // Azul Saga (Ação Secundária / Dados)
-    secondary: 'bg-brand-secondary text-white hover:bg-brand-secondaryHover focus:ring-brand-secondary shadow-sm',
-    // Verde Localiza (Confirmações / Estoque)
+    // Vermelho Automotivo (Ofertas / Preços / Destaques)
+    price: 'bg-brand-price text-white hover:bg-brand-priceHover focus:ring-brand-price shadow-sm',
+    // Verde Localiza (Confirmações / Ações de Estoque)
     accent: 'bg-brand-accent text-white hover:bg-brand-accentHover focus:ring-brand-accent shadow-sm',
-    // Outline Limpo
-    outline: 'border border-surface-border text-typography-body hover:bg-surface-muted hover:border-surface-borderHover focus:ring-brand-secondary',
+    // Outline Limpo com Foco Azul
+    outline: 'border border-surface-border text-typography-body hover:bg-surface-muted hover:border-surface-borderHover focus:ring-brand-primary',
     // Ghost Suave
     ghost: 'text-typography-muted hover:text-typography-heading hover:bg-surface-muted focus:ring-surface-border',
   };

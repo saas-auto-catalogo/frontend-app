@@ -12,7 +12,8 @@ import {
   ExternalLink,
   Plus,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  TrendingUp
 } from 'lucide-react';
 
 const SAMPLE_VEHICLES = [
@@ -149,7 +150,7 @@ export function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-canvas">
-      {/* Topbar / Navegação Principal (Estilo Webmotors / Localiza) */}
+      {/* Topbar / Navegação Principal (Saga / Localiza Tech Style) */}
       <header className="bg-surface-card border-b border-surface-border sticky top-0 z-30 shadow-subtle">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo & Marca */}
@@ -171,7 +172,7 @@ export function App() {
             <div className="hidden md:flex items-center gap-2 bg-surface-muted px-3 py-1.5 rounded-md border border-surface-border text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-brand-accent animate-pulse" />
               <span className="text-typography-muted">Feed Meta DAA:</span>
-              <span className="text-brand-accent font-semibold">Ativo (100% Sincronizado)</span>
+              <span className="text-brand-accent font-semibold">100% Sincronizado</span>
             </div>
 
             <Button
@@ -196,18 +197,18 @@ export function App() {
 
       {/* Conteúdo Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Banner de Boas-Vindas & Design System Clean */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
+        {/* Hero Banner Limpo com Azul Cobalto e Acentos */}
+        <div className="bg-gradient-to-r from-blue-900 via-slate-900 to-slate-900 rounded-xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium text-amber-300 mb-3 border border-white/10">
-              <Sparkles className="w-3.5 h-3.5" />
-              Design System Automotivo Light Mode (Webmotors / Localiza / Saga Inspired)
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium text-blue-200 mb-3 border border-white/10">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              Design System Harmônico • Saga / Localiza Tech Style
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Catálogo de Veículos & Inventário em Tempo Real
             </h1>
             <p className="text-slate-300 text-sm mt-2 leading-relaxed">
-              Plataforma com interface clara, alto contraste e processamento de feeds pesados. Conectado diretamente com os Catálogos Dinâmicos do Meta Ads.
+              Interface limpa de alto contraste. Gestão de inventário unificada com geração de feed XML em lote para o Meta Automotive Inventory Ads (DAA).
             </p>
           </div>
 
@@ -222,7 +223,7 @@ export function App() {
             title="Total no Estoque"
             value="142 veículos"
             subtitle="Inventário ativo multi-loja"
-            icon={<Car className="w-5 h-5" />}
+            icon={<Car className="w-5 h-5 text-brand-primary" />}
             trend={{ value: "+12 novos", isPositive: true }}
             variant="default"
           />
@@ -242,16 +243,16 @@ export function App() {
             subtitle="TTL Redis: 15 minutos"
             icon={<RefreshCw className="w-5 h-5" />}
             trend={{ value: "GZIP Ativo", isPositive: true }}
-            variant="secondary"
+            variant="primary"
           />
 
           <MetricCard
             title="Rejeições na Meta"
             value="0 erros"
             subtitle="Índice de conformidade 100%"
-            icon={<Layers className="w-5 h-5" />}
+            icon={<Layers className="w-5 h-5 text-brand-accent" />}
             trend={{ value: "100% Aprovado", isPositive: true }}
-            variant="primary"
+            variant="default"
           />
         </section>
 
@@ -269,7 +270,7 @@ export function App() {
             />
           </div>
 
-          {/* Filtros de Status (Tabs Limpas) */}
+          {/* Filtros de Status (Tabs Limpas com Azul Cobalto) */}
           <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
             <button
               onClick={() => setSelectedFilter('ALL')}
@@ -297,7 +298,7 @@ export function App() {
               onClick={() => setSelectedFilter('HYBRID_EV')}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
                 selectedFilter === 'HYBRID_EV'
-                  ? 'bg-brand-secondary text-white shadow-sm'
+                  ? 'bg-brand-primary text-white shadow-sm'
                   : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
               }`}
             >
@@ -343,45 +344,49 @@ export function App() {
           </div>
         </section>
 
-        {/* Guia de Tokens e Paleta de Cores do Design System */}
+        {/* Guia Visual da Harmonia Ponderada 60-30-10 */}
         <section className="bg-surface-card rounded-lg border border-surface-border p-6 shadow-card space-y-6">
-          <div>
-            <h3 className="text-base font-bold text-typography-heading">
-              🎨 Design System "Auto Clean Pro" — Paleta & Identidade
-            </h3>
-            <p className="text-xs text-typography-muted mt-1">
-              Homologado no Stitch MCP com inspiração nos portais Webmotors, Localiza Seminovos e Saga.
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-typography-heading flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-brand-primary" />
+                <span>Hierarquia & Harmonia das Cores (Regra 60-30-10)</span>
+              </h3>
+              <p className="text-xs text-typography-muted mt-0.5">
+                Arquitetura cromática calibrada para máxima conversão sem concorrência visual.
+              </p>
+            </div>
+            <Badge variant="primary" size="sm">Opção 2 Ativa</Badge>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg border border-red-200 bg-red-50">
+            <div className="p-4 rounded-lg border border-blue-200 bg-blue-50/50">
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-4 h-4 rounded-full bg-brand-primary" />
-                <span className="font-bold text-sm text-brand-primary">Vermelho Automotivo (#DC2626)</span>
+                <span className="font-bold text-sm text-brand-primary">1. Azul Cobalto (#1D4ED8)</span>
               </div>
-              <p className="text-xs text-red-900">
-                Inspirado no <strong>Webmotors</strong>. Utilizado para preços em destaque, CTAs de compra e badges de oferta.
+              <p className="text-xs text-blue-950 leading-relaxed">
+                <strong>Cor de Ação Primária:</strong> Comanda todos os botões de ação principal, navegação, links e tabs ativas. Dá tom profissional e corporativo ao SaaS.
               </p>
             </div>
 
-            <div className="p-4 rounded-lg border border-blue-200 bg-blue-50">
+            <div className="p-4 rounded-lg border border-red-200 bg-red-50/50">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-4 h-4 rounded-full bg-brand-secondary" />
-                <span className="font-bold text-sm text-brand-secondary">Azul Corporativo (#2563EB)</span>
+                <span className="w-4 h-4 rounded-full bg-brand-price" />
+                <span className="font-bold text-sm text-brand-price">2. Vermelho Automotivo (#DC2626)</span>
               </div>
-              <p className="text-xs text-blue-900">
-                Inspirado na <strong>Saga Primeira Mão</strong>. Utilizado para métricas de catálogo, links e dados técnicos.
+              <p className="text-xs text-red-950 leading-relaxed">
+                <strong>Destaque de Preços & Ofertas:</strong> Exclusivo para os valores dos carros e badges de promoção. O olho do comprador vai direto para o preço.
               </p>
             </div>
 
-            <div className="p-4 rounded-lg border border-green-200 bg-green-50">
+            <div className="p-4 rounded-lg border border-green-200 bg-green-50/50">
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-4 h-4 rounded-full bg-brand-accent" />
-                <span className="font-bold text-sm text-brand-accent">Verde Estoque (#16A34A)</span>
+                <span className="font-bold text-sm text-brand-accent">3. Verde Confiança (#16A34A)</span>
               </div>
-              <p className="text-xs text-green-900">
-                Inspirado na <strong>Localiza Seminovos</strong>. Utilizado para status "Em Estoque", garantia e aprovações.
+              <p className="text-xs text-green-950 leading-relaxed">
+                <strong>Status Funcional & Garantia:</strong> Badges sutis de <em>"Em Estoque"</em>, procedência e garantia revisada no padrão Localiza Seminovos.
               </p>
             </div>
           </div>

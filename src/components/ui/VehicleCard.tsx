@@ -48,7 +48,7 @@ export function VehicleCard({
 
   return (
     <div className="bg-surface-card rounded-lg border border-surface-border shadow-card hover:shadow-cardHover hover:border-surface-borderHover transition-all duration-200 flex flex-col overflow-hidden group">
-      {/* Container de Imagem (16:9) */}
+      {/* Container de Imagem (16:10) */}
       <div className="relative aspect-[16/10] bg-surface-muted overflow-hidden">
         <img
           src={heroImageUrl}
@@ -70,13 +70,13 @@ export function VehicleCard({
           )}
 
           {armored && (
-            <Badge variant="neutral" size="sm" icon={<Shield className="w-3 h-3 text-brand-primary" />}>
+            <Badge variant="neutral" size="sm" icon={<Shield className="w-3 h-3 text-typography-muted" />}>
               Blindado
             </Badge>
           )}
 
           {hasWarranty && (
-            <Badge variant="secondary" size="sm" icon={<CheckCircle2 className="w-3 h-3 text-brand-secondary" />}>
+            <Badge variant="available" size="sm" icon={<CheckCircle2 className="w-3 h-3 text-brand-accent" />}>
               Garantia
             </Badge>
           )}
@@ -108,7 +108,7 @@ export function VehicleCard({
 
           {/* Preço em Destaque (Vermelho Automotivo Webmotors) */}
           <div className="mt-3.5 flex items-baseline gap-2">
-            <span className="text-xl font-extrabold text-brand-primary tracking-tight">
+            <span className="text-xl font-extrabold text-brand-price tracking-tight">
               {price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </span>
             {promotionalPrice && promotionalPrice > 0 && promotionalPrice < price && (

@@ -9,15 +9,23 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          primary: '#DC2626',      // Vermelho Automotivo (Webmotors Inspired)
-          primaryHover: '#B91C1C',
-          primaryLight: '#FEE2E2',
-          secondary: '#2563EB',    // Azul Corporativo (Saga Inspired)
-          secondaryHover: '#1D4ED8',
-          secondaryLight: '#DBEAFE',
-          accent: '#16A34A',       // Verde Estoque / Confiança (Localiza Inspired)
+          // Identidade Primária: Azul Cobalto Saga / Tech Pro (Ações, Navegação e CTAs)
+          primary: '#1D4ED8',
+          primaryHover: '#1E40AF',
+          primaryLight: '#EFF6FF',
+          primaryBorder: '#BFDBFE',
+          
+          // Destaque de Preços & Ofertas: Vermelho Automotivo (Preço, Promoções, Urgência)
+          price: '#DC2626',
+          priceHover: '#B91C1C',
+          priceLight: '#FEF2F2',
+          priceBorder: '#FECACA',
+          
+          // Status & Confiança: Verde Localiza Seminovos (Estoque Ativo, Procedência, Garantia)
+          accent: '#16A34A',
           accentHover: '#15803D',
           accentLight: '#DCFCE7',
+          accentBorder: '#86EFAC',
         },
         surface: {
           canvas: '#F8FAFC',       // Fundo principal ultra limpo (Slate 50)
@@ -49,9 +57,9 @@ const config: Config = {
             border: '#FCD34D',
           },
           error: {
-            bg: '#FEE2E2',
+            bg: '#FEF2F2',
             text: '#991B1B',
-            border: '#FCA5A5',
+            border: '#FECACA',
           },
         }
       },

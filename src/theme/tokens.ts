@@ -1,19 +1,26 @@
 /**
- * Tokens do Design System Automotivo Light ("Auto Clean Pro")
- * Inspirado nas melhores práticas visuais de Webmotors, Localiza Seminovos e Saga.
+ * Tokens do Design System Automotivo Light ("Auto Clean Pro" - Opção 2 Saga/Localiza Tech)
+ * - Primária: Azul Cobalto Saga (#1D4ED8)
+ * - Destaque de Preços: Vermelho Automotivo (#DC2626)
+ * - Status de Estoque & Confiança: Verde Localiza (#16A34A)
  */
 
 export const colors = {
   brand: {
-    primary: '#DC2626',      // Vermelho Webmotors (CTA / Destaques / Preços)
-    primaryHover: '#B91C1C',
-    primaryLight: '#FEE2E2',
-    secondary: '#2563EB',    // Azul Saga (Links / Métricas / Tabs)
-    secondaryHover: '#1D4ED8',
-    secondaryLight: '#DBEAFE',
-    accent: '#16A34A',       // Verde Localiza (Disponível / Garantia / Sucesso)
+    primary: '#1D4ED8',      // Azul Cobalto (Identidade, CTAs, Navegação)
+    primaryHover: '#1E40AF',
+    primaryLight: '#EFF6FF',
+    primaryBorder: '#BFDBFE',
+    
+    price: '#DC2626',        // Vermelho Automotivo (Preços e Ofertas)
+    priceHover: '#B91C1C',
+    priceLight: '#FEF2F2',
+    priceBorder: '#FECACA',
+    
+    accent: '#16A34A',       // Verde Localiza (Disponível / Garantia / Procedência)
     accentHover: '#15803D',
     accentLight: '#DCFCE7',
+    accentBorder: '#86EFAC',
   },
   surface: {
     canvas: '#F8FAFC',       // Fundo limpo (Slate 50)
@@ -48,9 +55,9 @@ export const colors = {
       label: 'Sincronizando',
     },
     error: {
-      bg: '#FEE2E2',
+      bg: '#FEF2F2',
       text: '#991B1B',
-      border: '#FCA5A5',
+      border: '#FECACA',
       label: 'Rejeitado / Erro',
     },
   },
