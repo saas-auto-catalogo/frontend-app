@@ -14,7 +14,8 @@ export interface VehicleCardProps {
   mileage: number;
   fuelType: string;
   transmission: string;
-  heroImageUrl: string;
+  heroImageUrl?: string;
+  imageUrl?: string;
   licensePlate?: string;
   vin?: string;
   status: 'AVAILABLE' | 'SOLD' | 'SYNCING';
@@ -37,6 +38,7 @@ export function VehicleCard({
   fuelType,
   transmission,
   heroImageUrl,
+  imageUrl,
   licensePlate,
   status,
   armored,
@@ -51,7 +53,7 @@ export function VehicleCard({
       {/* Container de Imagem (16:10) */}
       <div className="relative aspect-[16/10] bg-surface-muted overflow-hidden">
         <img
-          src={heroImageUrl}
+          src={heroImageUrl || imageUrl}
           alt={`${make} ${model}`}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"

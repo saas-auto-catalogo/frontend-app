@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '../ui/Card.js';
 import { VehicleCard } from '../ui/VehicleCard.js';
 import { InventoryTable } from './InventoryTable.js';
@@ -9,36 +9,71 @@ import {
   LayoutGrid,
   List,
   Car,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
+import { vehicleService, Vehicle } from '../../services/api/vehicleService.js';
 
 export interface InventoryManagerProps {
-  initialVehicles: VehicleAdData[];
+  initialVehicles?: VehicleAdData[];
 }
 
 export function InventoryManager({ initialVehicles }: InventoryManagerProps) {
+  const [vehicles, setVehicles] = useState<VehicleAdData[]>(initialVehicles || []);
+  const [loading, setLoading] = useState<boolean>(!initialVehicles || initialVehicles.length === 0);
   const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMake, setSelectedMake] = useState<string>('ALL');
   const [selectedFuel, setSelectedFuel] = useState<string>('ALL');
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleAdData>(initialVehicles[0]);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleAdData | null>(
+    initialVehicles && initialVehicles.length > 0 ? initialVehicles[0] : null
+  );
+
+  const loadVehiclesFromApi = async () => {
+    try {
+      setLoading(true);
+      const res = await vehicleService.listVehicles({
+        search: searchQuery,
+        make: selectedMake !== 'ALL' ? selectedMake : undefined,
+        fuelType: selectedFuel !== 'ALL' ? selectedFuel : undefined,
+      });
+
+      const formattedVehicles: VehicleAdData[] = res.items.map((v: Vehicle) => ({
+        id: v.id,
+        make: v.make,
+        model: v.model,
+        version: v.version,
+        price: v.price,
+        promotionalPrice: v.promotionalPrice,
+        manufactureYear: v.manufactureYear,
+        modelYear: v.modelYear,
+        mileage: v.mileage,
+        fuelType: v.fuelType,
+        transmission: v.transmission,
+        licensePlate: v.licensePlate,
+        imageUrl: v.imageUrl,
+        armored: v.armored,
+        hasWarranty: v.hasWarranty,
+      }));
+
+      setVehicles(formattedVehicles);
+      if (formattedVehicles.length > 0 && !selectedVehicle) {
+        setSelectedVehicle(formattedVehicles[0]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadVehiclesFromApi();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedMake, selectedFuel]);
 
   // Marcas únicas disponíveis
-  const makes = Array.from(new Set(initialVehicles.map((v) => v.make)));
-
-  const filteredVehicles = initialVehicles.filter((v) => {
-    const matchesSearch =
-      v.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.version.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.licensePlate?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    if (!matchesSearch) return false;
-    if (selectedMake !== 'ALL' && v.make !== selectedMake) return false;
-    if (selectedFuel === 'HYBRID_EV' && !v.fuelType.includes('Híbrido') && !v.fuelType.includes('Elétrico')) return false;
-
-    return true;
-  });
+  const makes = Array.from(new Set(vehicles.map((v) => v.make)));
 
   return (
     <div className="space-y-6">
@@ -64,7 +99,7 @@ export function InventoryManager({ initialVehicles }: InventoryManagerProps) {
               onChange={(e) => setSelectedMake(e.target.value)}
               className="text-xs px-3 py-2 bg-surface-muted/60 border border-surface-border rounded-md text-typography-body focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium"
             >
-              <option value="ALL">Todas as Marcas ({makes.length})</option>
+              <option value="ALL">Todas as Marcas ({makes.length || 'Todas'})</option>
               {makes.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
@@ -106,8 +141,9 @@ export function InventoryManager({ initialVehicles }: InventoryManagerProps) {
             <Button
               variant="outline"
               size="sm"
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
-              onClick={() => alert('🔄 Sincronização disparada com o Gestor de Estoque DMS! Carregando últimos veículos atualizados.')}
+              icon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+              onClick={loadVehiclesFromApi}
+              loading={loading}
             >
               Re-Sync Estoque
             </Button>
@@ -122,7 +158,7 @@ export function InventoryManager({ initialVehicles }: InventoryManagerProps) {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-typography-heading flex items-center gap-2">
               <Car className="w-4 h-4 text-brand-primary" />
-              <span>Inventário da Revenda ({filteredVehicles.length} veículos)</span>
+              <span>Inventário da Revenda ({vehicles.length} veículos)</span>
             </h2>
 
             <span className="text-xs text-typography-muted">
@@ -130,10 +166,15 @@ export function InventoryManager({ initialVehicles }: InventoryManagerProps) {
             </span>
           </div>
 
-          {viewMode === 'GRID' ? (
+          {loading && vehicles.length === 0 ? (
+            <div className="p-12 flex flex-col items-center justify-center bg-white rounded-xl border border-surface-border gap-2 text-typography-muted">
+              <Loader2 className="w-6 h-6 animate-spin text-brand-primary" />
+              <p className="text-xs font-semibold">Carregando catálogo de veículos da API...</p>
+            </div>
+          ) : viewMode === 'GRID' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredVehicles.map((vehicle) => {
-                const isSelected = selectedVehicle.id === vehicle.id;
+              {vehicles.map((vehicle) => {
+                const isSelected = selectedVehicle?.id === vehicle.id;
                 return (
                   <div
                     key={vehicle.id}
@@ -154,8 +195,8 @@ export function InventoryManager({ initialVehicles }: InventoryManagerProps) {
           ) : (
             <Card className="overflow-hidden">
               <InventoryTable
-                vehicles={filteredVehicles}
-                selectedVehicleId={selectedVehicle.id}
+                vehicles={vehicles}
+                selectedVehicleId={selectedVehicle?.id}
                 onSelectVehicle={setSelectedVehicle}
                 onViewDetails={() => {}}
               />
@@ -165,7 +206,13 @@ export function InventoryManager({ initialVehicles }: InventoryManagerProps) {
 
         {/* Coluna Direita: Simulador de Anúncios Meta Ads Fixo (5/12 ou ~40%) */}
         <div className="lg:col-span-5 sticky top-20">
-          <MetaAdSimulator vehicle={selectedVehicle} />
+          {selectedVehicle ? (
+            <MetaAdSimulator vehicle={selectedVehicle} />
+          ) : (
+            <Card className="p-8 text-center text-xs text-typography-muted">
+              Selecione um veículo para visualizar a simulação.
+            </Card>
+          )}
         </div>
       </div>
     </div>

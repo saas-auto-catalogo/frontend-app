@@ -29,7 +29,8 @@ export interface VehicleAdData {
   mileage: number;
   fuelType: string;
   transmission: string;
-  heroImageUrl: string;
+  heroImageUrl?: string;
+  imageUrl?: string;
   licensePlate?: string;
   armored?: boolean;
   hasWarranty?: boolean;
@@ -149,7 +150,7 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
               {/* Imagem do Carro (1:1) */}
               <div className="relative aspect-square bg-slate-100 overflow-hidden">
                 <img
-                  src={vehicle.heroImageUrl}
+                  src={vehicle.heroImageUrl || vehicle.imageUrl}
                   alt={vehicle.model}
                   className="w-full h-full object-cover"
                 />
@@ -195,7 +196,7 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
             <div className="w-full max-w-[280px] aspect-[9/16] rounded-2xl border-4 border-slate-900 bg-slate-950 overflow-hidden shadow-xl text-white relative flex flex-col justify-between p-3.5">
               {/* Imagem de Fundo Completa */}
               <img
-                src={vehicle.heroImageUrl}
+                src={vehicle.heroImageUrl || vehicle.imageUrl}
                 alt={vehicle.model}
                 className="absolute inset-0 w-full h-full object-cover opacity-85"
               />
@@ -282,7 +283,7 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
 
               {/* Foto do Carro */}
               <div className="aspect-[16/10] bg-slate-100 overflow-hidden">
-                <img src={vehicle.heroImageUrl} alt={vehicle.model} className="w-full h-full object-cover" />
+                <img src={vehicle.heroImageUrl || vehicle.imageUrl} alt={vehicle.model} className="w-full h-full object-cover" />
               </div>
 
               {/* Box de Destino do Link */}
