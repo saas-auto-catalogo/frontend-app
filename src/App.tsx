@@ -16,6 +16,7 @@ import {
 
 import { XmlMapperStudio } from './components/xml-mapper/XmlMapperStudio.js';
 import { InventoryManager } from './components/inventory/InventoryManager.js';
+import { metaService } from './services/api/metaService.js';
 
 const SAMPLE_VEHICLES = [
   {
@@ -132,13 +133,16 @@ const SAMPLE_VEHICLES = [
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-
-  const handleTriggerSync = () => {
-    setIsSyncing(true);
-    setTimeout(() => {
+  const handleTriggerSync = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await metaService.triggerSync();
+      alert(`✅ ${res.message}`);
+    } catch (err: any) {
+      alert(`❌ Erro ao sincronizar com a Meta: ${err.message}`);
+    } finally {
       setIsSyncing(false);
-      alert('✅ Sincronização com o DMS e Meta Ads concluída com sucesso! Feed atualizado.');
-    }, 1500);
+    }
   };
 
   return (

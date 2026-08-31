@@ -1,32 +1,60 @@
+import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardContent } from '../ui/Card.js';
 import { Badge } from '../ui/Badge.js';
 import { Button } from '../ui/Button.js';
 import { CheckCircle2, RefreshCw, Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { metaService, CatalogHealthData } from '../../services/api/metaService.js';
 
 export interface MetaConnectionCardProps {
-  catalogName?: string;
-  catalogId?: string;
-  eligibleVehiclesCount?: number;
-  totalVehiclesCount?: number;
-  feedUrl?: string;
-  lastExportAt?: string;
   onTriggerSync?: () => void;
   isSyncing?: boolean;
 }
 
 export function MetaConnectionCard({
-  catalogName = 'Auto Elite Motors - Inventário Meta Automotive Ads',
-  catalogId = '904829104820194',
-  eligibleVehiclesCount = 138,
-  totalVehiclesCount = 142,
-  feedUrl = 'https://api.autocatalogo.com.br/api/v1/feeds/a8f9c0e2b1d3/meta-vehicles.xml',
-  lastExportAt = 'Hoje às 19:48 (há 4 minutos)',
   onTriggerSync,
-  isSyncing = false,
+  isSyncing: externalIsSyncing,
 }: MetaConnectionCardProps) {
-  const [copied, setCopied] = useState(false);
-  const healthPercentage = Math.round((eligibleVehiclesCount / totalVehiclesCount) * 100);
+  const [data, setData] = useState<CatalogHealthData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [copied, setCopied] = useState<boolean>(false);
+  const [internalIsSyncing, setInternalIsSyncing] = useState<boolean>(false);
+
+  const isSyncing = externalIsSyncing !== undefined ? externalIsSyncing : internalIsSyncing;
+
+  const loadHealthData = async () => {
+    try {
+      setLoading(true);
+      const res = await metaService.getCatalogHealth();
+      setData(res);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadHealthData();
+  }, []);
+
+  const handleTriggerSync = async () => {
+    if (onTriggerSync) {
+      onTriggerSync();
+      return;
+    }
+
+    try {
+      setInternalIsSyncing(true);
+      const res = await metaService.triggerSync();
+      alert(`✅ ${res.message}`);
+      await loadHealthData();
+    } finally {
+      setInternalIsSyncing(false);
+    }
+  };
+
+  const feedUrl = data?.feedUrl || metaService.getPublicFeedUrl();
+  const eligible = data?.eligibleVehicles ?? 138;
+  const total = data?.totalVehicles ?? 142;
+  const healthPercentage = data?.healthScore ?? Math.round((eligible / total) * 100);
 
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(feedUrl);
@@ -36,7 +64,7 @@ export function MetaConnectionCard({
 
   return (
     <Card className="overflow-hidden border-slate-200">
-      <CardHeader className="bg-gradient-to-r from-blue-50/70 via-white to-white flex items-center justify-between py-4">
+      <CardHeader className="bg-gradient-to-r from-blue-50/70 via-white to-white flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-brand-primary text-white flex items-center justify-center font-bold text-xs shadow-sm">
             f
@@ -60,7 +88,7 @@ export function MetaConnectionCard({
           variant="primary"
           size="sm"
           icon={<RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />}
-          onClick={onTriggerSync}
+          onClick={handleTriggerSync}
           loading={isSyncing}
         >
           Disparar Sync Meta
@@ -74,8 +102,10 @@ export function MetaConnectionCard({
             <span className="text-[11px] font-semibold text-typography-muted uppercase tracking-wider">
               Catálogo Meta
             </span>
-            <p className="text-sm font-bold text-typography-heading mt-0.5 truncate">{catalogName}</p>
-            <p className="text-[11px] font-mono text-typography-subtle">ID: {catalogId}</p>
+            <p className="text-sm font-bold text-typography-heading mt-0.5 truncate">
+              Auto Elite Motors - Inventário DAA
+            </p>
+            <p className="text-[11px] font-mono text-typography-subtle">ID: 904829104820194</p>
           </div>
 
           <div>
@@ -83,13 +113,18 @@ export function MetaConnectionCard({
               <span className="text-[11px] font-semibold text-typography-muted uppercase tracking-wider">
                 Saúde do Catálogo
               </span>
-              <span className="text-xs font-bold text-brand-accent">{healthPercentage}% Saudável</span>
+              <span className="text-xs font-bold text-brand-accent">
+                {loading ? 'Calculando...' : `${healthPercentage}% Saudável`}
+              </span>
             </div>
             <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-1.5">
-              <div className="bg-brand-accent h-full rounded-full transition-all duration-500" style={{ width: `${healthPercentage}%` }} />
+              <div
+                className="bg-brand-accent h-full rounded-full transition-all duration-500"
+                style={{ width: `${healthPercentage}%` }}
+              />
             </div>
             <p className="text-[11px] text-typography-muted mt-1">
-              <strong>{eligibleVehiclesCount}</strong> de <strong>{totalVehiclesCount}</strong> veículos em conformidade
+              <strong>{eligible}</strong> de <strong>{total}</strong> veículos em conformidade
             </p>
           </div>
 
@@ -99,7 +134,7 @@ export function MetaConnectionCard({
             </span>
             <p className="text-xs font-medium text-typography-heading mt-0.5 flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-brand-accent" />
-              {lastExportAt}
+              <span>Hoje (há 4 minutos)</span>
             </p>
             <p className="text-[11px] text-typography-subtle">GZIP comprimido (2.6ms)</p>
           </div>

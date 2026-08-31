@@ -1,85 +1,36 @@
+import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardContent } from '../ui/Card.js';
 import { Badge } from '../ui/Badge.js';
 import { Button } from '../ui/Button.js';
-import { AlertCircle, AlertTriangle, ArrowUpRight, ImageOff, DollarSign, FileWarning } from 'lucide-react';
-
-export interface PendingIssue {
-  id: string;
-  vehicleId: string;
-  make: string;
-  model: string;
-  version: string;
-  licensePlate: string;
-  issueType: 'MISSING_IMAGES' | 'INVALID_PRICE' | 'INVALID_VIN' | 'INCOMPLETE_SPECS';
-  message: string;
-  severity: 'ERROR' | 'WARNING';
-  detectedAt: string;
-  heroImageUrl?: string;
-}
-
-const SAMPLE_ISSUES: PendingIssue[] = [
-  {
-    id: 'iss-001',
-    vehicleId: 'bmw-x1-2024',
-    make: 'BMW',
-    model: 'X1 sDrive20i',
-    version: '2.0 TwinPower GP Tech',
-    licensePlate: 'BMW9X10',
-    issueType: 'MISSING_IMAGES',
-    message: 'Nenhuma imagem principal cadastrada no feed do DMS.',
-    severity: 'ERROR',
-    detectedAt: 'Há 12 minutos',
-    heroImageUrl: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=200&q=80'
-  },
-  {
-    id: 'iss-002',
-    vehicleId: 'fiat-pulse-2024',
-    make: 'FIAT',
-    model: 'Pulse Audace',
-    version: 'Turbo 200 Flex Aut.',
-    licensePlate: 'PUL7722',
-    issueType: 'INVALID_PRICE',
-    message: 'Preço cadastrado como R$ 0,00 no sistema DMS parceiro.',
-    severity: 'ERROR',
-    detectedAt: 'Há 25 minutos'
-  },
-  {
-    id: 'iss-003',
-    vehicleId: 'jeep-compass-2023',
-    make: 'JEEP',
-    model: 'Compass Limited',
-    version: 'T270 1.3 Turbo Flex',
-    licensePlate: 'JEP4A44',
-    issueType: 'INVALID_VIN',
-    message: 'Chassi / VIN não informado ou fora do padrão ISO 3779.',
-    severity: 'WARNING',
-    detectedAt: 'Há 1 hora',
-    heroImageUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=200&q=80'
-  },
-  {
-    id: 'iss-004',
-    vehicleId: 'volvo-xc60-2022',
-    make: 'VOLVO',
-    model: 'XC60 Recharge',
-    version: '2.0 T8 Inscription Híbrido',
-    licensePlate: 'VOL8800',
-    issueType: 'INCOMPLETE_SPECS',
-    message: 'Combustível e tipo de transmissão não mapeados.',
-    severity: 'WARNING',
-    detectedAt: 'Há 2 horas',
-    heroImageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=200&q=80'
-  }
-];
+import { AlertCircle, AlertTriangle, ArrowUpRight, ImageOff, DollarSign, FileWarning, RefreshCw } from 'lucide-react';
+import { metaService, CatalogIssueItem } from '../../services/api/metaService.js';
 
 export function PendingIssuesTable() {
-  const getIssueIcon = (type: PendingIssue['issueType']) => {
+  const [issues, setIssues] = useState<CatalogIssueItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const loadIssues = async () => {
+    try {
+      setLoading(true);
+      const res = await metaService.getDiagnosticsIssues();
+      setIssues(res);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadIssues();
+  }, []);
+
+  const getIssueIcon = (type: CatalogIssueItem['issueType']) => {
     switch (type) {
       case 'MISSING_IMAGES':
         return <ImageOff className="w-4 h-4 text-brand-price" />;
-      case 'INVALID_PRICE':
+      case 'PRICE_ZERO':
         return <DollarSign className="w-4 h-4 text-brand-price" />;
       case 'INVALID_VIN':
-      case 'INCOMPLETE_SPECS':
+      case 'YEAR_INVALID':
         return <FileWarning className="w-4 h-4 text-amber-500" />;
       default:
         return <AlertCircle className="w-4 h-4 text-brand-primary" />;
@@ -88,14 +39,14 @@ export function PendingIssuesTable() {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="flex items-center justify-between py-4">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-3">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-typography-heading">
               Diagnóstico de Pendências de Estoque
             </h3>
-            <span className="bg-brand-priceLight text-brand-price font-bold text-xs px-2 py-0.5 rounded-full">
-              4 Veículos Requerem Atenção
+            <span className="bg-red-50 text-brand-price border border-red-200 font-bold text-xs px-2 py-0.5 rounded-full">
+              {loading ? 'Verificando...' : `${issues.length} Veículos Requerem Atenção`}
             </span>
           </div>
           <p className="text-xs text-typography-muted mt-0.5">
@@ -103,9 +54,14 @@ export function PendingIssuesTable() {
           </p>
         </div>
 
-        <Button variant="ghost" size="sm" icon={<ArrowUpRight className="w-3.5 h-3.5" />}>
-          Exportar Relatório
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" icon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />} onClick={loadIssues}>
+            Atualizar
+          </Button>
+          <Button variant="outline" size="sm" icon={<ArrowUpRight className="w-3.5 h-3.5" />} onClick={() => alert('Exportando relatório CSV de pendências de estoque...')}>
+            Exportar Relatório
+          </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="p-0">
@@ -122,21 +78,21 @@ export function PendingIssuesTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border text-xs">
-              {SAMPLE_ISSUES.map((issue) => (
+              {issues.map((issue) => (
                 <tr key={issue.id} className="hover:bg-surface-muted/30 transition-colors">
                   {/* Veículo com Miniatura */}
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-md bg-surface-muted border border-surface-border overflow-hidden shrink-0 flex items-center justify-center">
-                        {issue.heroImageUrl ? (
-                          <img src={issue.heroImageUrl} alt={issue.model} className="w-full h-full object-cover" />
+                        {issue.imageUrl ? (
+                          <img src={issue.imageUrl} alt={issue.model} className="w-full h-full object-cover" />
                         ) : (
                           <ImageOff className="w-4 h-4 text-typography-subtle" />
                         )}
                       </div>
                       <div>
                         <p className="font-bold text-typography-heading">{issue.make} {issue.model}</p>
-                        <p className="text-[11px] text-typography-muted line-clamp-1">{issue.version}</p>
+                        <p className="text-[11px] text-typography-muted line-clamp-1">{issue.vehicleId}</p>
                       </div>
                     </div>
                   </td>
@@ -152,13 +108,16 @@ export function PendingIssuesTable() {
                   <td className="py-3.5 px-4">
                     <div className="flex items-start gap-2 max-w-sm">
                       <span className="mt-0.5 shrink-0">{getIssueIcon(issue.issueType)}</span>
-                      <span className="text-typography-body leading-relaxed">{issue.message}</span>
+                      <div>
+                        <p className="text-typography-heading font-medium leading-tight">{issue.description}</p>
+                        <p className="text-[11px] text-typography-muted mt-0.5">{issue.recommendation}</p>
+                      </div>
                     </div>
                   </td>
 
                   {/* Badge de Severidade */}
                   <td className="py-3.5 px-4">
-                    {issue.severity === 'ERROR' ? (
+                    {issue.severity === 'BLOCKING' ? (
                       <Badge variant="error" size="sm" icon={<AlertCircle className="w-3 h-3 text-brand-price" />}>
                         Bloqueante
                       </Badge>
@@ -179,7 +138,7 @@ export function PendingIssuesTable() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => alert(`Abrindo formulário de correção para o veículo ${issue.vehicleId}`)}
+                      onClick={() => alert(`Abrindo formulário de correção para o veículo ${issue.vehicleId} no DMS`)}
                     >
                       Corrigir no DMS
                     </Button>
