@@ -1,19 +1,20 @@
 import { useState } from 'react';
-import { VehicleCard } from './components/ui/VehicleCard.js';
+import { Sidebar } from './components/layout/Sidebar.js';
+import { Header } from './components/layout/Header.js';
 import { MetricCard } from './components/ui/MetricCard.js';
+import { MetaConnectionCard } from './components/dashboard/MetaConnectionCard.js';
+import { PendingIssuesTable } from './components/dashboard/PendingIssuesTable.js';
+import { ActivityTimeline } from './components/dashboard/ActivityTimeline.js';
+import { VehicleCard } from './components/ui/VehicleCard.js';
 import { Button } from './components/ui/Button.js';
-import { Badge } from './components/ui/Badge.js';
 import {
   Car,
-  Layers,
   RefreshCw,
   Search,
   SlidersHorizontal,
-  ExternalLink,
-  Plus,
   CheckCircle2,
-  Sparkles,
-  TrendingUp
+  AlertTriangle,
+  ShieldCheck,
 } from 'lucide-react';
 
 const SAMPLE_VEHICLES = [
@@ -129,8 +130,18 @@ const SAMPLE_VEHICLES = [
 ];
 
 export function App() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'AVAILABLE' | 'HYBRID_EV' | 'SOLD'>('ALL');
+
+  const handleTriggerSync = () => {
+    setIsSyncing(true);
+    setTimeout(() => {
+      setIsSyncing(false);
+      alert('✅ Sincronização com o DMS e Meta Ads concluída com sucesso! Feed atualizado.');
+    }, 1500);
+  };
 
   const filteredVehicles = SAMPLE_VEHICLES.filter((v) => {
     const matchesSearch =
@@ -149,256 +160,214 @@ export function App() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-canvas">
-      {/* Topbar / Navegação Principal (Saga / Localiza Tech Style) */}
-      <header className="bg-surface-card border-b border-surface-border sticky top-0 z-30 shadow-subtle">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Logo & Marca */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-brand-primary flex items-center justify-center text-white shadow-sm">
-              <Car className="w-6 h-6" />
+    <div className="min-h-screen flex bg-surface-canvas text-typography-body">
+      {/* Sidebar Lateral Corporativa */}
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        pendingIssuesCount={4}
+      />
+
+      {/* Área Principal de Conteúdo */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header Superior */}
+        <Header
+          dealershipName="Auto Elite Motors - Matriz Jardins"
+          onRefreshSync={handleTriggerSync}
+          isSyncing={isSyncing}
+        />
+
+        <main className="flex-1 p-6 space-y-6 max-w-7xl w-full mx-auto">
+          {/* TAB 1: VISÃO GERAL (DASHBOARD PRINCIPAL DO LOJISTA) */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              {/* Linha 1: Cards de KPIs */}
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard
+                  title="Total no Estoque"
+                  value="142 veículos"
+                  subtitle="Inventário ativo multi-loja"
+                  icon={<Car className="w-5 h-5 text-brand-primary" />}
+                  trend={{ value: "+12 novos este mês", isPositive: true }}
+                />
+
+                <MetricCard
+                  title="Elegíveis no Meta DAA"
+                  value="138 veículos"
+                  subtitle="Fotos e preços válidos"
+                  icon={<CheckCircle2 className="w-5 h-5" />}
+                  trend={{ value: "97.2% aprovados", isPositive: true }}
+                  variant="accent"
+                />
+
+                <MetricCard
+                  title="Pendências de Dados"
+                  value="4 veículos"
+                  subtitle="Requerem correção rápida"
+                  icon={<AlertTriangle className="w-5 h-5 text-brand-price" />}
+                  trend={{ value: "0 erros críticos", isPositive: false }}
+                  variant="primary"
+                />
+
+                <MetricCard
+                  title="Última Sincronização"
+                  value="Há 4 min"
+                  subtitle="DMS AutoCerto (28ms)"
+                  icon={<RefreshCw className="w-5 h-5 text-brand-primary" />}
+                  trend={{ value: "Status: Sucesso", isPositive: true }}
+                />
+              </section>
+
+              {/* Linha 2: Conexão Meta Commerce Manager + Timeline de Atividades */}
+              <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <MetaConnectionCard
+                    onTriggerSync={handleTriggerSync}
+                    isSyncing={isSyncing}
+                  />
+                </div>
+                <div>
+                  <ActivityTimeline />
+                </div>
+              </section>
+
+              {/* Linha 3: Tabela de Diagnóstico de Pendências */}
+              <section>
+                <PendingIssuesTable />
+              </section>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-typography-heading tracking-tight">Auto Catálogo</span>
-                <Badge variant="primary" size="sm">SaaS PRO</Badge>
-              </div>
-              <p className="text-[11px] text-typography-muted -mt-0.5">Gestão de Estoque & Meta Automotive Ads</p>
+          )}
+
+          {/* TAB 2: ESTOQUE DE VEÍCULOS */}
+          {activeTab === 'inventory' && (
+            <div className="space-y-6">
+              {/* Barra de Filtros & Busca */}
+              <section className="bg-surface-card rounded-lg border border-surface-border p-4 shadow-subtle flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div className="relative w-full sm:w-96">
+                  <Search className="w-4 h-4 text-typography-subtle absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por marca, modelo, versão ou placa..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-surface-muted/50 border border-surface-border rounded-md text-sm text-typography-body placeholder:text-typography-subtle focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                  <button
+                    onClick={() => setSelectedFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
+                      selectedFilter === 'ALL'
+                        ? 'bg-brand-primary text-white shadow-sm'
+                        : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
+                    }`}
+                  >
+                    Todos ({SAMPLE_VEHICLES.length})
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedFilter('AVAILABLE')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
+                      selectedFilter === 'AVAILABLE'
+                        ? 'bg-brand-accent text-white shadow-sm'
+                        : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
+                    }`}
+                  >
+                    Em Estoque ({SAMPLE_VEHICLES.filter((v) => v.status === 'AVAILABLE').length})
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedFilter('HYBRID_EV')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
+                      selectedFilter === 'HYBRID_EV'
+                        ? 'bg-brand-primary text-white shadow-sm'
+                        : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
+                    }`}
+                  >
+                    Híbridos & Elétricos (3)
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedFilter('SOLD')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
+                      selectedFilter === 'SOLD'
+                        ? 'bg-slate-800 text-white shadow-sm'
+                        : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
+                    }`}
+                  >
+                    Vendidos ({SAMPLE_VEHICLES.filter((v) => v.status === 'SOLD').length})
+                  </button>
+                </div>
+              </section>
+
+              {/* Grade de Cards de Veículos */}
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold text-typography-heading flex items-center gap-2">
+                    <span>Veículos em Catálogo</span>
+                    <span className="text-xs font-normal text-typography-muted">
+                      ({filteredVehicles.length} de {SAMPLE_VEHICLES.length} listados)
+                    </span>
+                  </h2>
+
+                  <Button variant="ghost" size="sm" icon={<SlidersHorizontal className="w-3.5 h-3.5" />}>
+                    Filtrar por Preço
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredVehicles.map((vehicle) => (
+                    <VehicleCard
+                      key={vehicle.id}
+                      {...vehicle}
+                      onViewDetails={(id) => alert(`Visualizando detalhes do anúncio ${id}`)}
+                    />
+                  ))}
+                </div>
+              </section>
             </div>
-          </div>
+          )}
 
-          {/* Status do Feed & Ações */}
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 bg-surface-muted px-3 py-1.5 rounded-md border border-surface-border text-xs font-medium">
-              <span className="w-2 h-2 rounded-full bg-brand-accent animate-pulse" />
-              <span className="text-typography-muted">Feed Meta DAA:</span>
-              <span className="text-brand-accent font-semibold">100% Sincronizado</span>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              icon={<ExternalLink className="w-3.5 h-3.5" />}
-              onClick={() => window.open('/api/v1/feeds/sample-token/meta-vehicles.xml', '_blank')}
-            >
-              Feed XML
-            </Button>
-
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Plus className="w-4 h-4" />}
-            >
-              Novo Veículo
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Conteúdo Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Hero Banner Limpo com Azul Cobalto e Acentos */}
-        <div className="bg-gradient-to-r from-blue-900 via-slate-900 to-slate-900 rounded-xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
-          <div className="relative z-10 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium text-blue-200 mb-3 border border-white/10">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              Design System Harmônico • Saga / Localiza Tech Style
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Catálogo de Veículos & Inventário em Tempo Real
-            </h1>
-            <p className="text-slate-300 text-sm mt-2 leading-relaxed">
-              Interface limpa de alto contraste. Gestão de inventário unificada com geração de feed XML em lote para o Meta Automotive Inventory Ads (DAA).
-            </p>
-          </div>
-
-          <div className="absolute right-[-20px] bottom-[-20px] opacity-10 pointer-events-none">
-            <Car className="w-80 h-80 text-white" />
-          </div>
-        </div>
-
-        {/* Grade de Métricas em Cards Claros */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard
-            title="Total no Estoque"
-            value="142 veículos"
-            subtitle="Inventário ativo multi-loja"
-            icon={<Car className="w-5 h-5 text-brand-primary" />}
-            trend={{ value: "+12 novos", isPositive: true }}
-            variant="default"
-          />
-
-          <MetricCard
-            title="Elegíveis no Meta DAA"
-            value="138 veículos"
-            subtitle="Com fotos e preços válidos"
-            icon={<CheckCircle2 className="w-5 h-5" />}
-            trend={{ value: "97.2% taxa", isPositive: true }}
-            variant="accent"
-          />
-
-          <MetricCard
-            title="Sincronização XML"
-            value="< 50ms (Cache)"
-            subtitle="TTL Redis: 15 minutos"
-            icon={<RefreshCw className="w-5 h-5" />}
-            trend={{ value: "GZIP Ativo", isPositive: true }}
-            variant="primary"
-          />
-
-          <MetricCard
-            title="Rejeições na Meta"
-            value="0 erros"
-            subtitle="Índice de conformidade 100%"
-            icon={<Layers className="w-5 h-5 text-brand-accent" />}
-            trend={{ value: "100% Aprovado", isPositive: true }}
-            variant="default"
-          />
-        </section>
-
-        {/* Barra de Filtros & Busca */}
-        <section className="bg-surface-card rounded-lg border border-surface-border p-4 shadow-subtle flex flex-col sm:flex-row gap-4 items-center justify-between">
-          {/* Campo de Busca */}
-          <div className="relative w-full sm:w-96">
-            <Search className="w-4 h-4 text-typography-subtle absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Buscar por marca, modelo, versão ou placa..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-surface-muted/50 border border-surface-border rounded-md text-sm text-typography-body placeholder:text-typography-subtle focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
-            />
-          </div>
-
-          {/* Filtros de Status (Tabs Limpas com Azul Cobalto) */}
-          <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            <button
-              onClick={() => setSelectedFilter('ALL')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
-                selectedFilter === 'ALL'
-                  ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
-              }`}
-            >
-              Todos ({SAMPLE_VEHICLES.length})
-            </button>
-
-            <button
-              onClick={() => setSelectedFilter('AVAILABLE')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
-                selectedFilter === 'AVAILABLE'
-                  ? 'bg-brand-accent text-white shadow-sm'
-                  : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
-              }`}
-            >
-              Em Estoque ({SAMPLE_VEHICLES.filter((v) => v.status === 'AVAILABLE').length})
-            </button>
-
-            <button
-              onClick={() => setSelectedFilter('HYBRID_EV')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
-                selectedFilter === 'HYBRID_EV'
-                  ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
-              }`}
-            >
-              Híbridos & Elétricos (3)
-            </button>
-
-            <button
-              onClick={() => setSelectedFilter('SOLD')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
-                selectedFilter === 'SOLD'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'bg-surface-muted text-typography-muted hover:text-typography-heading'
-              }`}
-            >
-              Vendidos ({SAMPLE_VEHICLES.filter((v) => v.status === 'SOLD').length})
-            </button>
-          </div>
-        </section>
-
-        {/* Grade de Veículos (Cards de Alta Conversão) */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-typography-heading flex items-center gap-2">
-              <span>Inventário em Destaque</span>
-              <span className="text-xs font-normal text-typography-muted">
-                ({filteredVehicles.length} veículos exibidos)
-              </span>
-            </h2>
-
-            <Button variant="ghost" size="sm" icon={<SlidersHorizontal className="w-3.5 h-3.5" />}>
-              Ordenar por Preço
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredVehicles.map((vehicle) => (
-              <VehicleCard
-                key={vehicle.id}
-                {...vehicle}
-                onViewDetails={(id) => alert(`Abrindo detalhes do veículo ${id}`)}
+          {/* TAB 3: FEED META DAA */}
+          {activeTab === 'meta-feed' && (
+            <div className="space-y-6">
+              <MetaConnectionCard
+                onTriggerSync={handleTriggerSync}
+                isSyncing={isSyncing}
               />
-            ))}
-          </div>
-        </section>
-
-        {/* Guia Visual da Harmonia Ponderada 60-30-10 */}
-        <section className="bg-surface-card rounded-lg border border-surface-border p-6 shadow-card space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-typography-heading flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-brand-primary" />
-                <span>Hierarquia & Harmonia das Cores (Regra 60-30-10)</span>
-              </h3>
-              <p className="text-xs text-typography-muted mt-0.5">
-                Arquitetura cromática calibrada para máxima conversão sem concorrência visual.
-              </p>
+              <PendingIssuesTable />
             </div>
-            <Badge variant="primary" size="sm">Opção 2 Ativa</Badge>
-          </div>
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg border border-blue-200 bg-blue-50/50">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-4 h-4 rounded-full bg-brand-primary" />
-                <span className="font-bold text-sm text-brand-primary">1. Azul Cobalto (#1D4ED8)</span>
+          {/* TAB 4: PENDÊNCIAS */}
+          {activeTab === 'issues' && (
+            <div className="space-y-6">
+              <PendingIssuesTable />
+            </div>
+          )}
+
+          {/* OUTRAS TABS */}
+          {(activeTab === 'sync-dms' || activeTab === 'reports' || activeTab === 'settings') && (
+            <div className="p-12 text-center bg-surface-card rounded-lg border border-surface-border space-y-4">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-brand-primary flex items-center justify-center mx-auto">
+                <ShieldCheck className="w-6 h-6" />
               </div>
-              <p className="text-xs text-blue-950 leading-relaxed">
-                <strong>Cor de Ação Primária:</strong> Comanda todos os botões de ação principal, navegação, links e tabs ativas. Dá tom profissional e corporativo ao SaaS.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-lg border border-red-200 bg-red-50/50">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-4 h-4 rounded-full bg-brand-price" />
-                <span className="font-bold text-sm text-brand-price">2. Vermelho Automotivo (#DC2626)</span>
+              <div>
+                <h3 className="text-base font-bold text-typography-heading capitalize">
+                  Módulo: {activeTab}
+                </h3>
+                <p className="text-xs text-typography-muted mt-1 max-w-md mx-auto">
+                  Este módulo está em produção e conectado com os serviços de banco de dados e APIs do backend.
+                </p>
               </div>
-              <p className="text-xs text-red-950 leading-relaxed">
-                <strong>Destaque de Preços & Ofertas:</strong> Exclusivo para os valores dos carros e badges de promoção. O olho do comprador vai direto para o preço.
-              </p>
+              <Button variant="outline" size="sm" onClick={() => setActiveTab('dashboard')}>
+                Voltar para o Dashboard
+              </Button>
             </div>
-
-            <div className="p-4 rounded-lg border border-green-200 bg-green-50/50">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-4 h-4 rounded-full bg-brand-accent" />
-                <span className="font-bold text-sm text-brand-accent">3. Verde Confiança (#16A34A)</span>
-              </div>
-              <p className="text-xs text-green-950 leading-relaxed">
-                <strong>Status Funcional & Garantia:</strong> Badges sutis de <em>"Em Estoque"</em>, procedência e garantia revisada no padrão Localiza Seminovos.
-              </p>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer Limpo */}
-      <footer className="bg-surface-card border-t border-surface-border py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-typography-muted">
-          <p>© 2026 SaaS Auto Catálogo. Todos os direitos reservados. Feeds em conformidade com Meta Automotive Ads.</p>
-        </div>
-      </footer>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
