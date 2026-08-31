@@ -4,10 +4,13 @@ import { Badge } from '../ui/Badge.js';
 import { Button } from '../ui/Button.js';
 import { DmsPresetSelector, DMS_PRESETS, DmsPreset } from './DmsPresetSelector.js';
 import { XmlPreviewPanel } from './XmlPreviewPanel.js';
+import { OnboardingXmlWizard } from './OnboardingXmlWizard.js';
 import {
   Sparkles,
   Save,
   RotateCcw,
+  Compass,
+  Sliders
 } from 'lucide-react';
 
 export interface FieldMappingRule {
@@ -47,6 +50,7 @@ const INITIAL_MAPPINGS: Record<string, FieldMappingRule[]> = {
 };
 
 export function XmlMapperStudio() {
+  const [isWizardMode, setIsWizardMode] = useState<boolean>(false);
   const [selectedPreset, setSelectedPreset] = useState<DmsPreset>(DMS_PRESETS[0]);
   const [mappings, setMappings] = useState<FieldMappingRule[]>(INITIAL_MAPPINGS['autocerto']);
   const [isSaving, setIsSaving] = useState(false);
@@ -71,8 +75,54 @@ export function XmlMapperStudio() {
     }, 900);
   };
 
+  if (isWizardMode) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<Sliders className="w-3.5 h-3.5" />}
+            onClick={() => setIsWizardMode(false)}
+          >
+            Abrir Estúdio Avançado
+          </Button>
+        </div>
+        <OnboardingXmlWizard
+          onComplete={(url) => {
+            alert(`🎉 Onboarding finalizado! Feed ativo em: ${url}`);
+            setIsWizardMode(false);
+          }}
+          onCancel={() => setIsWizardMode(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Banner de Alternância para o Wizard */}
+      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-subtle">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+            <Compass className="w-5 h-5 text-blue-300" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold">Assistente de Conexão Rápida de Estoque</h4>
+            <p className="text-xs text-blue-200">
+              Configure sua loja em 3 etapas guiadas com auto-detecção de campos.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setIsWizardMode(true)}
+          className="px-4 py-2 bg-white text-brand-primary font-bold text-xs rounded-lg hover:bg-blue-50 transition-all flex items-center gap-1.5 shadow-sm shrink-0"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Iniciar Wizard de Onboarding</span>
+        </button>
+      </div>
       {/* Seletor de Presets do DMS */}
       <DmsPresetSelector
         selectedPresetId={selectedPreset.id}
