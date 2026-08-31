@@ -1,4 +1,4 @@
-import { Search, Bell, ExternalLink, RefreshCw, Plus, Store } from 'lucide-react';
+import { Search, Bell, ExternalLink, RefreshCw, Store } from 'lucide-react';
 import { Button } from '../ui/Button.js';
 
 export interface HeaderProps {
@@ -49,30 +49,22 @@ export function Header({
       {/* Ações & Controles do Lojista */}
       <div className="flex items-center gap-2.5">
         <Button
-          variant="outline"
+          variant="primary"
           size="sm"
-          icon={<RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-brand-primary' : ''}`} />}
+          icon={<RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />}
           onClick={onRefreshSync}
           loading={isSyncing}
         >
-          Sincronizar DMS
+          Sincronizar Estoque DMS
         </Button>
 
         <Button
           variant="outline"
           size="sm"
           icon={<ExternalLink className="w-3.5 h-3.5" />}
-          onClick={() => window.open('/api/v1/feeds/sample-token/meta-vehicles.xml', '_blank')}
+          onClick={() => window.open('/api/v1/feeds/sec_tok_98f12ae8b10/meta-vehicles.xml', '_blank')}
         >
-          Feed XML
-        </Button>
-
-        <Button
-          variant="primary"
-          size="sm"
-          icon={<Plus className="w-4 h-4" />}
-        >
-          Novo Veículo
+          Feed XML Meta
         </Button>
 
         <div className="h-6 w-[1px] bg-surface-border mx-1" />

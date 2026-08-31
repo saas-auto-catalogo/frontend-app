@@ -8,8 +8,8 @@ import {
   Search,
   LayoutGrid,
   List,
-  Plus,
-  Car
+  Car,
+  RefreshCw
 } from 'lucide-react';
 
 export interface InventoryManagerProps {
@@ -103,8 +103,13 @@ export function InventoryManager({ initialVehicles }: InventoryManagerProps) {
               </button>
             </div>
 
-            <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />}>
-              Cadastrar Veículo
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<RefreshCw className="w-3.5 h-3.5" />}
+              onClick={() => alert('🔄 Sincronização disparada com o Gestor de Estoque DMS! Carregando últimos veículos atualizados.')}
+            >
+              Re-Sync Estoque
             </Button>
           </div>
         </div>
