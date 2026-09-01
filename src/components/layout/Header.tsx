@@ -1,16 +1,24 @@
-import { Search, Bell, ExternalLink, RefreshCw, Store } from 'lucide-react';
+import { Search, Bell, ExternalLink, RefreshCw, Store, LogOut } from 'lucide-react';
 import { Button } from '../ui/Button.js';
 
 export interface HeaderProps {
   dealershipName?: string;
+  userName?: string;
+  userInitials?: string;
   onRefreshSync?: () => void;
   isSyncing?: boolean;
+  onLogout?: () => void;
+  isLoggingOut?: boolean;
 }
 
 export function Header({
   dealershipName = 'Auto Elite Motors - Matriz Jardins',
+  userName,
+  userInitials = 'FB',
   onRefreshSync,
   isSyncing = false,
+  onLogout,
+  isLoggingOut = false,
 }: HeaderProps) {
   return (
     <header className="bg-surface-card border-b border-surface-border h-16 px-6 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-subtle">
@@ -75,8 +83,24 @@ export function Header({
           <span className="w-2 h-2 rounded-full bg-brand-price absolute top-1.5 right-1.5" />
         </button>
 
-        <div className="w-8 h-8 rounded-full bg-brand-primary text-white font-bold text-xs flex items-center justify-center shadow-sm">
-          FB
+        {onLogout ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<LogOut className="w-3.5 h-3.5" />}
+            onClick={onLogout}
+            loading={isLoggingOut}
+            title={userName ? `Sair (${userName})` : 'Sair'}
+          >
+            Sair
+          </Button>
+        ) : null}
+
+        <div
+          className="w-8 h-8 rounded-full bg-brand-primary text-white font-bold text-xs flex items-center justify-center shadow-sm"
+          title={userName}
+        >
+          {userInitials}
         </div>
       </div>
     </header>
