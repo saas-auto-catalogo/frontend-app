@@ -64,6 +64,18 @@ export interface DashboardIssuesResponse {
   items: CatalogIssueItem[];
 }
 
+export interface ActivityEvent {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  occurredAt: string;
+}
+
+export interface DashboardActivityResponse {
+  events: ActivityEvent[];
+}
+
 export const dashboardService = {
   async getStats(workspaceId: string): Promise<DashboardStats> {
     return httpClient.get<DashboardStats>(`/workspaces/${workspaceId}/dashboard/stats`);
@@ -81,5 +93,13 @@ export const dashboardService = {
       `/workspaces/${workspaceId}/dashboard/issues`,
     );
     return response.items;
+  },
+
+  async getDashboardActivity(workspaceId: string, limit = 20): Promise<ActivityEvent[]> {
+    const response = await httpClient.get<DashboardActivityResponse>(
+      `/workspaces/${workspaceId}/dashboard/activity`,
+      { params: { limit } },
+    );
+    return response.events;
   },
 };
