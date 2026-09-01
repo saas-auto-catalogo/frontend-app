@@ -203,7 +203,7 @@ export function DashboardApp() {
                     />
                   </div>
                   <div>
-                    <ActivityTimeline />
+                    <ActivityTimeline workspaceId={workspaceId} />
                   </div>
                 </section>
               )}
