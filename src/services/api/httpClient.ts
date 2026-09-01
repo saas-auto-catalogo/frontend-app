@@ -1,12 +1,16 @@
 import { env } from '../../config/env.js';
 import { ApiError } from '../../types/api.js';
+import { authTokenStore } from '../auth/authTokenStore.js';
 
 export interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
   timeout?: number;
   tenantId?: string;
   authToken?: string;
+  skipAuthRefresh?: boolean;
 }
+
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password'];
 
 export class HttpClient {
   private baseUrl: string;
@@ -32,17 +36,37 @@ export class HttpClient {
     return url.toString();
   }
 
-  public async request<T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  private isAuthEndpoint(endpoint: string): boolean {
+    const normalized = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    return AUTH_ENDPOINTS.some((path) => normalized === path || normalized.startsWith(`${path}?`));
+  }
+
+  private resolveAuthToken(explicitToken?: string): string | undefined {
+    return explicitToken ?? authTokenStore.getAccessToken() ?? undefined;
+  }
+
+  private parseErrorMessage(responseData: any, status: number): string {
+    return (
+      responseData?.error?.message ||
+      responseData?.detail ||
+      responseData?.message ||
+      `Erro na requisição: HTTP ${status}`
+    );
+  }
+
+  public async request<T = any>(endpoint: string, options: RequestOptions = {}, isRetry = false): Promise<T> {
     const {
       params,
       timeout = this.defaultTimeout,
       tenantId = 'default-tenant',
       authToken,
+      skipAuthRefresh = false,
       headers: customHeaders,
       ...fetchOptions
     } = options;
 
     const url = this.buildUrl(endpoint, params);
+    const resolvedToken = this.resolveAuthToken(authToken);
 
     const headers = new Headers(customHeaders);
     if (!headers.has('Content-Type') && !(fetchOptions.body instanceof FormData)) {
@@ -51,8 +75,8 @@ export class HttpClient {
     headers.set('Accept', 'application/json');
     headers.set('x-tenant-id', tenantId);
 
-    if (authToken) {
-      headers.set('Authorization', `Bearer ${authToken}`);
+    if (resolvedToken) {
+      headers.set('Authorization', `Bearer ${resolvedToken}`);
     }
 
     const controller = new AbortController();
@@ -62,12 +86,12 @@ export class HttpClient {
       const response = await fetch(url, {
         ...fetchOptions,
         headers,
+        credentials: 'include',
         signal: controller.signal,
       });
 
       clearTimeout(timer);
 
-      // Tratamento de respostas sem corpo (ex: 204 No Content)
       if (response.status === 204) {
         return {} as T;
       }
@@ -76,16 +100,25 @@ export class HttpClient {
       const responseData = isJson ? await response.json() : await response.text();
 
       if (!response.ok) {
-        const errorMessage =
-          responseData?.error?.message ||
-          responseData?.message ||
-          `Erro na requisição: HTTP ${response.status}`;
-
+        const errorMessage = this.parseErrorMessage(responseData, response.status);
         const errorCode = responseData?.error?.code || `HTTP_${response.status}`;
-        throw new ApiError(errorMessage, response.status, errorCode, responseData);
+        const apiError = new ApiError(errorMessage, response.status, errorCode, responseData);
+
+        if (
+          response.status === 401 &&
+          !skipAuthRefresh &&
+          !isRetry &&
+          !this.isAuthEndpoint(endpoint)
+        ) {
+          const newToken = await authTokenStore.refreshAccessToken();
+          if (newToken) {
+            return this.request<T>(endpoint, options, true);
+          }
+        }
+
+        throw apiError;
       }
 
-      // Se a resposta estiver encapsulada em { success: true, data: ... }, extrai o data se conveniente
       return responseData as T;
     } catch (error: any) {
       clearTimeout(timer);
@@ -98,12 +131,11 @@ export class HttpClient {
         throw error;
       }
 
-      // Falhas de rede / servidor offline
       throw new ApiError(
         error.message || 'Falha de conexão com o servidor de API backend',
         503,
         'NETWORK_ERROR',
-        error
+        error,
       );
     }
   }
@@ -116,7 +148,7 @@ export class HttpClient {
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: body instanceof FormData ? body : JSON.stringify(body),
+      body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
     });
   }
 
