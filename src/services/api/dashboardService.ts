@@ -43,6 +43,27 @@ export interface MetaCatalogsResponse {
   catalogs: MetaCatalogSummary[];
 }
 
+export type CatalogIssueType = 'MISSING_IMAGES' | 'PRICE_ZERO' | 'INVALID_VIN' | 'YEAR_INVALID';
+export type CatalogIssueSeverity = 'BLOCKING' | 'WARNING';
+
+export interface CatalogIssueItem {
+  id: string;
+  vehicleId: string;
+  make: string;
+  model: string;
+  licensePlate: string;
+  issueType: CatalogIssueType;
+  severity: CatalogIssueSeverity;
+  description: string;
+  recommendation: string;
+  detectedAt: string;
+  imageUrl?: string;
+}
+
+export interface DashboardIssuesResponse {
+  items: CatalogIssueItem[];
+}
+
 export const dashboardService = {
   async getStats(workspaceId: string): Promise<DashboardStats> {
     return httpClient.get<DashboardStats>(`/workspaces/${workspaceId}/dashboard/stats`);
@@ -53,5 +74,12 @@ export const dashboardService = {
       `/workspaces/${workspaceId}/meta-catalogs`,
     );
     return response.catalogs;
+  },
+
+  async getDashboardIssues(workspaceId: string): Promise<CatalogIssueItem[]> {
+    const response = await httpClient.get<DashboardIssuesResponse>(
+      `/workspaces/${workspaceId}/dashboard/issues`,
+    );
+    return response.items;
   },
 };

@@ -208,9 +208,11 @@ export function DashboardApp() {
                 </section>
               )}
 
-              <section>
-                <PendingIssuesTable />
-              </section>
+              {workspaceId && (
+                <section>
+                  <PendingIssuesTable workspaceId={workspaceId} />
+                </section>
+              )}
             </div>
           )}
 
@@ -228,13 +230,13 @@ export function DashboardApp() {
                 onTriggerSync={handleTriggerSync}
                 isSyncing={isSyncing}
               />
-              <PendingIssuesTable />
+              <PendingIssuesTable workspaceId={workspaceId} />
             </div>
           )}
 
-          {activeTab === 'issues' && (
+          {activeTab === 'issues' && workspaceId && (
             <div className="space-y-6">
-              <PendingIssuesTable />
+              <PendingIssuesTable workspaceId={workspaceId} />
             </div>
           )}
 
