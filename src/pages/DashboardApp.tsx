@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar.js';
 import { Header } from '../components/layout/Header.js';
 import { MetricCard } from '../components/ui/MetricCard.js';
@@ -34,9 +35,12 @@ function getUserInitials(name: string): string {
 }
 
 export function DashboardApp() {
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { workspaceId, workspaceName } = useWorkspace();
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [activeTab, setActiveTab] = useState<string>(
+    (location.state as { tab?: string } | null)?.tab ?? 'dashboard',
+  );
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [feeds, setFeeds] = useState<FeedConfigSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +49,13 @@ export function DashboardApp() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const dealershipName = workspaceName || 'Auto Elite Motors - Matriz Jardins';
+
+  useEffect(() => {
+    const tabFromState = (location.state as { tab?: string } | null)?.tab;
+    if (tabFromState) {
+      setActiveTab(tabFromState);
+    }
+  }, [location.state]);
 
   const loadDashboard = useCallback(async () => {
     if (!workspaceId) {

@@ -5,6 +5,7 @@ import { RegisterPage } from './pages/RegisterPage.js';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
 import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
 import { DashboardApp } from './pages/DashboardApp.js';
+import { AuditLogsPage } from './pages/AuditLogsPage.js';
 
 export function App() {
   return (
@@ -20,6 +21,7 @@ export function App() {
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<DashboardApp />} />
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
+          <Route path="/audit-logs" element={<AuditLogsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
