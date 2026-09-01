@@ -1,3 +1,4 @@
+import { PaginatedResponse } from '../../types/api.js';
 import { httpClient } from './httpClient.js';
 
 export type SyncStatus = 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED' | 'RUNNING';
@@ -76,6 +77,38 @@ export interface DashboardActivityResponse {
   events: ActivityEvent[];
 }
 
+export interface AuditLog {
+  id: string;
+  action: string;
+  entityName: string;
+  entityId: string | null;
+  actorEmail: string;
+  actorUserId: string;
+  ipAddress: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface AuditLogListParams {
+  page?: number;
+  limit?: number;
+  action?: string;
+  entityName?: string;
+  from?: string;
+  to?: string;
+}
+
+function buildAuditLogQueryParams(params: AuditLogListParams = {}) {
+  return {
+    page: params.page,
+    limit: params.limit,
+    action: params.action,
+    entityName: params.entityName,
+    from: params.from,
+    to: params.to,
+  };
+}
+
 export const dashboardService = {
   async getStats(workspaceId: string): Promise<DashboardStats> {
     return httpClient.get<DashboardStats>(`/workspaces/${workspaceId}/dashboard/stats`);
@@ -101,5 +134,15 @@ export const dashboardService = {
       { params: { limit } },
     );
     return response.events;
+  },
+
+  async listAuditLogs(
+    workspaceId: string,
+    params: AuditLogListParams = {},
+  ): Promise<PaginatedResponse<AuditLog>> {
+    return httpClient.get<PaginatedResponse<AuditLog>>(
+      `/workspaces/${workspaceId}/audit-logs`,
+      { params: buildAuditLogQueryParams(params) },
+    );
   },
 };

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardContent } from '../ui/Card.js';
 import {
   CheckCircle2,
@@ -50,6 +51,7 @@ function getActivityVisual(type: string): { icon: JSX.Element; badgeBg: string }
 }
 
 export function ActivityTimeline({ workspaceId }: ActivityTimelineProps) {
+  const navigate = useNavigate();
   const { role } = useWorkspace();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -105,7 +107,7 @@ export function ActivityTimeline({ workspaceId }: ActivityTimelineProps) {
           <button
             type="button"
             className="text-xs font-semibold text-brand-primary hover:text-brand-primaryHover flex items-center gap-1"
-            onClick={() => alert('Visualização completa de audit logs em breve.')}
+            onClick={() => navigate('/audit-logs')}
           >
             Ver Log Completo
             <ArrowUpRight className="w-3.5 h-3.5" />
