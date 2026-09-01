@@ -1,0 +1,11 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    uses: saas-auto-catalogo/.github/.github/workflows/reusable-vite-ci.yml@main
