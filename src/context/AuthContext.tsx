@@ -24,6 +24,15 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function normalizeUser(user: AuthUser): AuthUser {
+  const primary = user.memberships?.[0];
+  return {
+    ...user,
+    workspaceId: user.workspaceId ?? primary?.workspaceId ?? null,
+    role: user.role ?? primary?.role ?? null,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -49,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccessToken(refreshResult.accessToken);
 
         const meResult = await authService.getMe();
-        setUser(meResult.user);
+        setUser(normalizeUser(meResult.user));
       } catch {
         clearSession();
       } finally {
@@ -66,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(result.accessToken);
 
     const meResult = await authService.getMe();
-    setUser(meResult.user);
+    setUser(normalizeUser(meResult.user));
   }, []);
 
   const register = useCallback(async (payload: RegisterPayload) => {
@@ -75,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(result.accessToken);
 
     const meResult = await authService.getMe();
-    setUser(meResult.user);
+    setUser(normalizeUser(meResult.user));
   }, []);
 
   const logout = useCallback(async () => {
