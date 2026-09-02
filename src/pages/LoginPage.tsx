@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button.js';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError } from '../types/api.js';
 import { isValidEmail } from '../utils/validation.js';
+import { getPostAuthPath } from '../utils/auth.js';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -45,8 +46,8 @@ export function LoginPage() {
 
     try {
       setIsSubmitting(true);
-      await login(email.trim(), password);
-      navigate(from, { replace: true });
+      const user = await login(email.trim(), password);
+      navigate(getPostAuthPath(user, from), { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.message);

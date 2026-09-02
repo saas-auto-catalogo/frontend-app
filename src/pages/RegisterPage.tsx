@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button.js';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError } from '../types/api.js';
 import { isValidEmail, isValidPassword, passwordsMatch } from '../utils/validation.js';
+import { getPostAuthPath } from '../utils/auth.js';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -61,13 +62,13 @@ export function RegisterPage() {
 
     try {
       setIsSubmitting(true);
-      await register({
+      const user = await register({
         name: name.trim(),
         email: email.trim(),
         password,
         workspaceName: workspaceName.trim(),
       });
-      navigate('/', { replace: true });
+      navigate(getPostAuthPath(user), { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.message);

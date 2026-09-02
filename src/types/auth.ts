@@ -14,6 +14,13 @@ export interface AuthUser {
     role: string;
   }>;
   createdAt?: string;
+  onboardingCompleted?: boolean;
+  onboardingStep?: number;
+}
+
+export interface UpdateOnboardingPayload {
+  onboardingStep?: number;
+  onboardingCompleted?: boolean;
 }
 
 export interface LoginResponse {
