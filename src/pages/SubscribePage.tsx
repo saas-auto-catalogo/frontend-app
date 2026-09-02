@@ -1,104 +1,206 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CreditCard, LogOut, ExternalLink } from 'lucide-react';
-import { AuthLayout } from '../components/auth/AuthLayout.js';
-import { Button } from '../components/ui/Button.js';
-import { useAuth } from '../context/AuthContext.js';
-import { useSubscription } from '../context/SubscriptionContext.js';
-import { env } from '../config/env.js';
-import { getPostAuthPath } from '../utils/auth.js';
-import { isActiveSubscription } from '../utils/subscription.js';
-
-export function SubscribePage() {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const { billing, refetchBilling } = useSubscription();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  useEffect(() => {
-    if (user && billing && isActiveSubscription(billing.status)) {
-      navigate(getPostAuthPath(user, billing), { replace: true });
-    }
-  }, [user, billing, navigate]);
-
-  const handleChoosePlan = () => {
-    if (env.marketingCheckoutUrl) {
-      window.open(env.marketingCheckoutUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
-  };
-
-  const handleRefresh = async () => {
-    const latest = await refetchBilling();
-    if (user && latest && isActiveSubscription(latest.status)) {
-      navigate(getPostAuthPath(user, latest), { replace: true });
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      setIsLoggingOut(true);
-      await logout();
-      navigate('/login', { replace: true });
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
-  return (
-    <AuthLayout
-      title="Contrate um plano para continuar"
-      subtitle="Escolha um plano para liberar o onboarding e o painel da sua revenda."
-    >
-      <div className="space-y-6">
-        <div className="rounded-lg border border-surface-border bg-surface-muted/40 p-4 flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-blue-50 text-brand-primary shrink-0">
-            <CreditCard className="w-5 h-5" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-typography-heading">
-              Assinatura necessária
-            </p>
-            <p className="text-sm text-typography-muted">
-              Seu workspace ainda não possui um plano ativo. Após concluir o pagamento, volte
-              aqui e clique em &quot;Já paguei&quot; para continuar.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <Button
-            variant="primary"
-            size="md"
-            icon={<ExternalLink className="w-4 h-4" />}
-            onClick={handleChoosePlan}
-            disabled={!env.marketingCheckoutUrl}
-          >
-            Escolher plano
-          </Button>
-
-          {!env.marketingCheckoutUrl ? (
-            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              Configure `VITE_MARKETING_CHECKOUT_URL` no ambiente para habilitar o checkout
-              externo.
-            </p>
-          ) : null}
-
-          <Button variant="outline" size="md" onClick={() => void handleRefresh()}>
-            Já paguei — verificar assinatura
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="md"
-            icon={<LogOut className="w-4 h-4" />}
-            onClick={() => void handleLogout()}
-            loading={isLoggingOut}
-          >
-            Sair
-          </Button>
-        </div>
-      </div>
-    </AuthLayout>
-  );
-}
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CreditCard, LogOut } from 'lucide-react';
+import { clsx } from 'clsx';
+import { AuthLayout } from '../components/auth/AuthLayout.js';
+import { Button } from '../components/ui/Button.js';
+import { useAuth } from '../context/AuthContext.js';
+import { useSubscription } from '../context/SubscriptionContext.js';
+import { useWorkspace } from '../hooks/useWorkspace.js';
+import { billingService } from '../services/api/billingService.js';
+import { ApiError } from '../types/api.js';
+import type { BillingInterval, PlanTier } from '../types/billing.js';
+import { PLAN_OPTIONS, parsePlanTier } from '../types/billing.js';
+import { getPostAuthPath } from '../utils/auth.js';
+import { isActiveSubscription } from '../utils/subscription.js';
+
+export function SubscribePage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user, logout } = useAuth();
+  const { billing, refetchBilling } = useSubscription();
+  const { workspaceId } = useWorkspace();
+
+  const [selectedPlan, setSelectedPlan] = useState<PlanTier>(() =>
+    parsePlanTier(searchParams.get('plan')),
+  );
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>('MONTHLY');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    const planFromQuery = searchParams.get('plan');
+    if (planFromQuery) {
+      setSelectedPlan(parsePlanTier(planFromQuery));
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (user && billing && isActiveSubscription(billing.status)) {
+      navigate(getPostAuthPath(user, billing), { replace: true });
+    }
+  }, [user, billing, navigate]);
+
+  const handleSubscribe = async () => {
+    if (!workspaceId) {
+      setFormError('Workspace não encontrado. Faça login novamente.');
+      return;
+    }
+
+    setFormError(null);
+
+    try {
+      setIsSubmitting(true);
+      const origin = window.location.origin;
+      const session = await billingService.createWorkspaceCheckoutSession(workspaceId, {
+        plan: selectedPlan,
+        billingInterval,
+        successUrl: `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${origin}/subscribe?plan=${selectedPlan}`,
+      });
+      window.location.href = session.url;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.statusCode === 409) {
+          const latest = await refetchBilling();
+          if (user && latest) {
+            navigate(getPostAuthPath(user, latest), { replace: true });
+            return;
+          }
+        }
+        setFormError(error.message);
+      } else {
+        setFormError('Não foi possível iniciar o checkout. Tente novamente.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    const latest = await refetchBilling();
+    if (user && latest && isActiveSubscription(latest.status)) {
+      navigate(getPostAuthPath(user, latest), { replace: true });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      navigate('/login', { replace: true });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  return (
+    <AuthLayout
+      title="Contrate um plano para continuar"
+      subtitle="Escolha o plano ideal e conclua o pagamento para liberar o onboarding."
+    >
+      <div className="space-y-6">
+        <div className="rounded-lg border border-surface-border bg-surface-muted/40 p-4 flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-blue-50 text-brand-primary shrink-0">
+            <CreditCard className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-typography-heading">Assinatura necessária</p>
+            <p className="text-sm text-typography-muted">
+              Seu workspace ainda não possui um plano ativo. Após o pagamento no Stripe, você será
+              redirecionado automaticamente.
+            </p>
+          </div>
+        </div>
+
+        {formError ? (
+          <div className="rounded-md border border-brand-price/30 bg-brand-priceLight px-3.5 py-2.5 text-sm text-brand-price">
+            {formError}
+          </div>
+        ) : null}
+
+        <div className="flex p-1 bg-surface-muted rounded-lg border border-surface-border">
+          <button
+            type="button"
+            className={clsx(
+              'flex-1 py-2 text-sm font-medium rounded-md transition-colors',
+              billingInterval === 'MONTHLY'
+                ? 'bg-white text-typography-heading shadow-sm'
+                : 'text-typography-muted hover:text-typography-heading',
+            )}
+            onClick={() => setBillingInterval('MONTHLY')}
+          >
+            Mensal
+          </button>
+          <button
+            type="button"
+            className={clsx(
+              'flex-1 py-2 text-sm font-medium rounded-md transition-colors',
+              billingInterval === 'YEARLY'
+                ? 'bg-white text-typography-heading shadow-sm'
+                : 'text-typography-muted hover:text-typography-heading',
+            )}
+            onClick={() => setBillingInterval('YEARLY')}
+          >
+            Anual
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {PLAN_OPTIONS.map((plan) => (
+            <button
+              key={plan.id}
+              type="button"
+              onClick={() => setSelectedPlan(plan.id)}
+              className={clsx(
+                'w-full text-left rounded-lg border p-4 transition-colors',
+                selectedPlan === plan.id
+                  ? 'border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary/30'
+                  : 'border-surface-border bg-white hover:border-surface-borderHover',
+              )}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-typography-heading">{plan.name}</p>
+                  <p className="text-sm text-typography-muted mt-0.5">{plan.description}</p>
+                </div>
+                {plan.highlight ? (
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-primary bg-brand-primary/10 px-2 py-1 rounded">
+                    Popular
+                  </span>
+                ) : null}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => void handleSubscribe()}
+            loading={isSubmitting}
+          >
+            Contratar plano
+          </Button>
+
+          <Button variant="outline" size="md" onClick={() => void handleRefresh()}>
+            Já paguei — verificar assinatura
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="md"
+            icon={<LogOut className="w-4 h-4" />}
+            onClick={() => void handleLogout()}
+            loading={isLoggingOut}
+          >
+            Sair
+          </Button>
+        </div>
+      </div>
+    </AuthLayout>
+  );
+}
+

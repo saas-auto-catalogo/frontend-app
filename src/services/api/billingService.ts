@@ -1,4 +1,8 @@
 import { httpClient } from './httpClient.js';
+import type {
+  CreateWorkspaceCheckoutSessionPayload,
+  CheckoutSessionResponse,
+} from '../../types/billing.js';
 
 export type SubscriptionStatus =
   | 'NONE'
@@ -40,5 +44,15 @@ export const billingService = {
 
   async createPortalSession(returnUrl: string): Promise<PortalSessionResponse> {
     return httpClient.post<PortalSessionResponse>('/billing/portal', { returnUrl });
+  },
+
+  async createWorkspaceCheckoutSession(
+    workspaceId: string,
+    payload: CreateWorkspaceCheckoutSessionPayload,
+  ): Promise<CheckoutSessionResponse> {
+    return httpClient.post<CheckoutSessionResponse>(
+      `/workspaces/${workspaceId}/checkout/stripe/session`,
+      payload,
+    );
   },
 };

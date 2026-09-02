@@ -7,14 +7,13 @@ import { useAuth } from '../context/AuthContext.js';
 import { useSubscription } from '../context/SubscriptionContext.js';
 import { ApiError } from '../types/api.js';
 import { isValidEmail } from '../utils/validation.js';
-import { getPostAuthPath } from '../utils/auth.js';
-import { buildAuthPathWithSession, getCheckoutSessionId } from '../utils/checkout.js';
+import { resolvePostAuthNavigatePath } from '../utils/auth.js';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const checkoutSessionId = getCheckoutSessionId(searchParams);
+  const selectedPlan = searchParams.get('plan');
   const { login } = useAuth();
   const { refetchBilling } = useSubscription();
 
@@ -25,7 +24,6 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const from = (location.state as { from?: string } | null)?.from || '/';
-  const registerPath = buildAuthPathWithSession('/register', checkoutSessionId);
 
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
@@ -54,7 +52,7 @@ export function LoginPage() {
       setIsSubmitting(true);
       const user = await login(email.trim(), password);
       const billing = await refetchBilling();
-      navigate(getPostAuthPath(user, billing, from), { replace: true });
+      navigate(resolvePostAuthNavigatePath(user, billing, from, selectedPlan), { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.message);
@@ -66,18 +64,16 @@ export function LoginPage() {
     }
   };
 
+  const registerPath = selectedPlan
+    ? `/register?plan=${encodeURIComponent(selectedPlan)}`
+    : '/register';
+
   return (
     <AuthLayout
       title="Entrar na sua conta"
       subtitle="Acesse o painel da sua revenda e gerencie o catálogo."
     >
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-        {checkoutSessionId ? (
-          <div className="rounded-md border border-brand-primary/20 bg-brand-primary/5 px-3.5 py-2.5 text-sm text-typography-body">
-            Pagamento confirmado. Já possui conta? Faça login para continuar.
-          </div>
-        ) : null}
-
         {formError ? (
           <div className="rounded-md border border-brand-price/30 bg-brand-priceLight px-3.5 py-2.5 text-sm text-brand-price">
             {formError}
