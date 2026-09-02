@@ -11,8 +11,12 @@ import {
   Layers,
   Copy,
   ShieldCheck,
+  AlertCircle,
 } from 'lucide-react';
 import { DMS_PRESETS, DmsPreset } from './DmsPresetSelector.js';
+import { useWorkspace } from '../../hooks/useWorkspace.js';
+import { feedService } from '../../services/api/feedService.js';
+import { ApiError } from '../../types/api.js';
 
 export interface OnboardingXmlWizardProps {
   onComplete?: (feedUrl: string) => void;
@@ -20,21 +24,74 @@ export interface OnboardingXmlWizardProps {
 }
 
 export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizardProps) {
+  const { workspaceId } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [xmlUrl, setXmlUrl] = useState<string>('https://integrador.autocerto.com/feed/loja123/estoque.xml');
   const [selectedPreset, setSelectedPreset] = useState<DmsPreset>(DMS_PRESETS[0]);
   const [isValidatingUrl, setIsValidatingUrl] = useState<boolean>(false);
-  const [urlStatus, setUrlStatus] = useState<'IDLE' | 'VALID' | 'INVALID'>('VALID');
+  const [urlStatus, setUrlStatus] = useState<'IDLE' | 'VALID' | 'INVALID'>('IDLE');
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [vehicleCount, setVehicleCount] = useState<number | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
 
   const generatedFeedUrl = 'https://api.autocatalogo.com.br/api/v1/feeds/sec_tok_98f12ae8b10/meta-vehicles.xml';
 
-  const handleTestUrl = () => {
+  const handleXmlUrlChange = (value: string) => {
+    setXmlUrl(value);
+    setUrlStatus('IDLE');
+    setValidationMessage(null);
+    setVehicleCount(null);
+  };
+
+  const handleTestUrl = async () => {
+    const trimmedUrl = xmlUrl.trim();
+
+    if (!workspaceId) {
+      setUrlStatus('INVALID');
+      setValidationMessage('Workspace não encontrado. Faça login novamente.');
+      return;
+    }
+
+    if (!trimmedUrl) {
+      setUrlStatus('INVALID');
+      setValidationMessage('Informe uma URL do feed XML.');
+      return;
+    }
+
     setIsValidatingUrl(true);
-    setTimeout(() => {
+    setValidationMessage(null);
+    setVehicleCount(null);
+
+    try {
+      const result = await feedService.validateUrl(workspaceId, trimmedUrl);
+
+      if (result.valid) {
+        setUrlStatus('VALID');
+        setVehicleCount(result.vehicleCount ?? null);
+        setValidationMessage(null);
+
+        if (result.suggestedPresetId) {
+          const suggested = DMS_PRESETS.find((p) => p.id === result.suggestedPresetId);
+          if (suggested) {
+            setSelectedPreset(suggested);
+          }
+        }
+      } else {
+        setUrlStatus('INVALID');
+        setValidationMessage(
+          result.error ?? 'Não foi possível validar a URL do feed.',
+        );
+      }
+    } catch (error) {
+      setUrlStatus('INVALID');
+      setValidationMessage(
+        error instanceof ApiError
+          ? error.message
+          : 'Falha ao validar a URL. Tente novamente.',
+      );
+    } finally {
       setIsValidatingUrl(false);
-      setUrlStatus('VALID');
-    }, 700);
+    }
   };
 
   const handleCopyFeedUrl = () => {
@@ -141,7 +198,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
                   <input
                     type="url"
                     value={xmlUrl}
-                    onChange={(e) => setXmlUrl(e.target.value)}
+                    onChange={(e) => handleXmlUrlChange(e.target.value)}
                     placeholder="https://suarevenda.com.br/estoque.xml"
                     className="w-full pl-9 pr-4 py-2.5 bg-surface-muted/60 border border-surface-border rounded-lg text-xs font-mono text-typography-heading focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
                   />
@@ -151,6 +208,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
                   size="md"
                   onClick={handleTestUrl}
                   loading={isValidatingUrl}
+                  disabled={!xmlUrl.trim() || !workspaceId || isValidatingUrl}
                 >
                   Testar Link
                 </Button>
@@ -159,12 +217,25 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
               {urlStatus === 'VALID' && (
                 <div className="p-3 bg-green-50/80 border border-green-200 rounded-lg flex items-center gap-2 text-xs text-green-800">
                   <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                  <span><strong>Conexão bem-sucedida!</strong> Detectamos 142 veículos disponíveis no payload XML do integrador.</span>
+                  <span>
+                    <strong>Conexão bem-sucedida!</strong>{' '}
+                    {vehicleCount != null
+                      ? `Detectamos ${vehicleCount} veículo${vehicleCount === 1 ? '' : 's'} disponíve${vehicleCount === 1 ? 'l' : 'is'} no payload XML do integrador.`
+                      : 'Feed XML válido detectado no integrador.'}
+                  </span>
+                </div>
+              )}
+
+              {urlStatus === 'INVALID' && validationMessage && (
+                <div className="p-3 bg-red-50/80 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-800">
+                  <AlertCircle className="w-4 h-4 text-brand-price shrink-0" />
+                  <span>{validationMessage}</span>
                 </div>
               )}
             </div>
 
             {/* Seleção do Provedor DMS */}
+            {urlStatus === 'VALID' && (
             <div className="space-y-3 pt-2">
               <label className="block text-xs font-bold text-typography-heading">
                 Detectamos o formato compatível com o seu sistema:
@@ -195,6 +266,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
                 })}
               </div>
             </div>
+            )}
           </div>
         )}
 
@@ -332,6 +404,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
                 size="md"
                 icon={<ArrowRight className="w-4 h-4" />}
                 onClick={() => setCurrentStep((prev) => prev + 1)}
+                disabled={currentStep === 1 && urlStatus !== 'VALID'}
               >
                 Continuar
               </Button>
