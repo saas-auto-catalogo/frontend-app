@@ -67,10 +67,16 @@ Variáveis em `.env.example`:
 
 - `VITE_API_URL` — URL base da API (default: `http://localhost:3333/api/v1`)
 - `VITE_API_TIMEOUT` — timeout em ms (default: `15000`)
-- `VITE_MARKETING_URL` — URL base do site marketing (links "tentar novamente" no cadastro pós-checkout)
-- `VITE_MARKETING_CHECKOUT_URL` — URL direta do checkout de planos (paywall e retry)
-- `VITE_CHECKOUT_SUCCESS_PATH` — path no app após checkout Stripe (default: `/register`; marketing deve redirecionar para `{APP_URL}{path}?session_id={CHECKOUT_SESSION_ID}`)
 - `VITE_ENABLE_MOCK_FALLBACK=true` — opt-in: exibe veículos demo quando a API está indisponível (desligado por default)
+
+### Fluxo comercial (register-first)
+
+1. `/register` → cadastro com workspace
+2. `/subscribe` — seleção de plano e checkout Stripe autenticado no app
+3. `/subscribe/success` — confirmação e poll de billing
+4. `/onboarding` — liberado após assinatura `ACTIVE`/`TRIALING`
+
+Query opcional: `/register?plan=PRO` pré-seleciona o plano na página de assinatura.
 
 ### Credenciais seed
 
@@ -94,6 +100,7 @@ Variáveis em `.env.example`:
 Localizados em `src/services/api/`:
 
 - `authService` — sessão JWT + cookie refresh
+- `billingService` — billing do workspace, portal Stripe e checkout autenticado
 - `dashboardService` — stats, meta-catalogs, issues, activity
 - `vehicleService` — listagem paginada
 - `feedService` — feeds do workspace

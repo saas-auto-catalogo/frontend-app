@@ -9,6 +9,7 @@ import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { OnboardingPage } from './pages/OnboardingPage.js';
 import { MetaCallbackPage } from './pages/MetaCallbackPage.js';
 import { SubscribePage } from './pages/SubscribePage.js';
+import { SubscribeSuccessPage } from './pages/SubscribeSuccessPage.js';
 import { BillingSettingsPage } from './pages/BillingSettingsPage.js';
 
 export function App() {
@@ -24,6 +25,7 @@ export function App() {
 
         <Route element={<PrivateRoute />}>
           <Route path="/subscribe" element={<SubscribePage />} />
+          <Route path="/subscribe/success" element={<SubscribeSuccessPage />} />
           <Route path="/settings/billing" element={<BillingSettingsPage />} />
 
           <Route element={<RequireActiveSubscription />}>

@@ -17,3 +17,16 @@ export function getPostAuthPath(
 
   return user.onboardingCompleted === false ? '/onboarding' : fallback;
 }
+
+export function resolvePostAuthNavigatePath(
+  user: AuthUser,
+  billing: WorkspaceBilling | null | undefined,
+  fallback = '/',
+  plan: string | null = null,
+): string {
+  const path = getPostAuthPath(user, billing, fallback);
+  if (path === '/subscribe' && plan) {
+    return `/subscribe?plan=${encodeURIComponent(plan)}`;
+  }
+  return path;
+}
