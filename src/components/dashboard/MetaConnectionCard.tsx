@@ -1,20 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardHeader, CardContent } from '../ui/Card.js';
 import { Badge } from '../ui/Badge.js';
 import { Button } from '../ui/Button.js';
-import { CheckCircle2, RefreshCw, Copy, Check, AlertTriangle } from 'lucide-react';
-import {
-  dashboardService,
-  MetaCatalogSummary,
-  CatalogStatus,
-} from '../../services/api/dashboardService.js';
+import { CheckCircle2, RefreshCw, Copy, Check, AlertTriangle, Rss } from 'lucide-react';
+import { type CatalogStatus, type MetaCatalogSummary } from '../../services/api/dashboardService.js';
+import { metaService } from '../../services/api/metaService.js';
 import { formatRelativeTime, formatSyncStatus } from '../../utils/format.js';
 import { DataFetchError } from '../ui/DataFetchError.js';
 
 export interface MetaConnectionCardProps {
   workspaceId: string;
   catalogStatus?: CatalogStatus;
-  onTriggerSync?: () => void;
+  activeFeedId?: string;
+  onTriggerSync?: () => void | Promise<void>;
   isSyncing?: boolean;
 }
 
@@ -34,23 +32,27 @@ function getConnectionBadge(status?: CatalogStatus, exportStatus?: string | null
 export function MetaConnectionCard({
   workspaceId,
   catalogStatus,
+  activeFeedId,
   onTriggerSync,
   isSyncing: externalIsSyncing,
 }: MetaConnectionCardProps) {
   const [catalog, setCatalog] = useState<MetaCatalogSummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [internalIsSyncing, setInternalIsSyncing] = useState<boolean>(false);
+  const prevExternalSyncing = useRef<boolean | undefined>(externalIsSyncing);
 
   const isSyncing = externalIsSyncing !== undefined ? externalIsSyncing : internalIsSyncing;
+  const canSync = Boolean(activeFeedId);
 
   const loadCatalogData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const catalogs = await dashboardService.listMetaCatalogs(workspaceId);
-      setCatalog(catalogs[0] ?? null);
+      const result = await metaService.getCatalogHealth(workspaceId);
+      setCatalog(result.catalog);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao carregar catálogo Meta';
       setError(message);
@@ -63,21 +65,43 @@ export function MetaConnectionCard({
     void loadCatalogData();
   }, [workspaceId]);
 
+  useEffect(() => {
+    if (prevExternalSyncing.current && externalIsSyncing === false) {
+      void loadCatalogData();
+    }
+    prevExternalSyncing.current = externalIsSyncing;
+  }, [externalIsSyncing]);
+
   const handleTriggerSync = async () => {
+    setSyncError(null);
+
     if (onTriggerSync) {
-      onTriggerSync();
+      await onTriggerSync();
+      return;
+    }
+
+    if (!activeFeedId) {
+      setSyncError('Configure um feed DMS antes de sincronizar o catálogo Meta.');
       return;
     }
 
     try {
       setInternalIsSyncing(true);
+      const result = await metaService.triggerFeedSync(workspaceId, activeFeedId);
+      if (!result.success) {
+        setSyncError(result.message);
+        return;
+      }
       await loadCatalogData();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao sincronizar o feed DMS.';
+      setSyncError(message);
     } finally {
       setInternalIsSyncing(false);
     }
   };
 
-  const feedUrl = catalog?.publicFeedUrl ?? '';
+  const feedUrl = metaService.getPublicFeedUrl(catalog) ?? '';
   const eligible = catalog?.eligibleVehiclesCount ?? 0;
   const total = catalog?.totalVehiclesCount ?? 0;
   const healthPercentage = catalog?.healthScore ?? (total > 0 ? Math.round((eligible / total) * 100) : 0);
@@ -94,7 +118,33 @@ export function MetaConnectionCard({
     return (
       <Card className="overflow-hidden border-slate-200">
         <CardContent className="p-6">
-          <DataFetchError message={error} onRetry={loadCatalogData} />
+          <DataFetchError message={error} onRetry={() => void loadCatalogData()} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!loading && !catalog) {
+    return (
+      <Card className="overflow-hidden border-slate-200">
+        <CardContent className="p-8 text-center space-y-4">
+          <div className="w-12 h-12 rounded-full bg-blue-50 text-brand-primary flex items-center justify-center mx-auto">
+            <Rss className="w-6 h-6" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-base font-bold text-typography-heading">
+              Catálogo Meta não configurado
+            </h3>
+            <p className="text-sm text-typography-muted max-w-md mx-auto">
+              Configure um feed DMS e sincronize seu estoque para gerar o catálogo Meta Ads com URL
+              pública, contagem de veículos e health score reais.
+            </p>
+          </div>
+          {!canSync ? (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 inline-block">
+              Nenhum feed DMS ativo encontrado neste workspace.
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     );
@@ -126,14 +176,21 @@ export function MetaConnectionCard({
           variant="primary"
           size="sm"
           icon={<RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />}
-          onClick={handleTriggerSync}
+          onClick={() => void handleTriggerSync()}
           loading={isSyncing}
+          disabled={!canSync && !onTriggerSync}
         >
           Disparar Sync Meta
         </Button>
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {syncError ? (
+          <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {syncError}
+          </p>
+        ) : null}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg bg-surface-muted/60 border border-surface-border">
           <div>
             <span className="text-[11px] font-semibold text-typography-muted uppercase tracking-wider">
