@@ -7,6 +7,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
 import { DashboardApp } from './pages/DashboardApp.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { OnboardingPage } from './pages/OnboardingPage.js';
+import { MetaCallbackPage } from './pages/MetaCallbackPage.js';
 
 export function App() {
   return (
@@ -21,6 +22,7 @@ export function App() {
 
         <Route element={<PrivateRoute />}>
           <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/meta/callback" element={<MetaCallbackPage />} />
           <Route element={<RequireOnboardingComplete />}>
             <Route path="/" element={<DashboardApp />} />
             <Route path="/dashboard" element={<Navigate to="/" replace />} />

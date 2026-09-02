@@ -4,7 +4,6 @@ import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { OnboardingStepper } from '../components/onboarding/OnboardingStepper.js';
-import { OnboardingStepPlaceholder } from '../components/onboarding/OnboardingStepPlaceholder.js';
 import { OnboardingSummaryStep } from '../components/onboarding/OnboardingSummaryStep.js';
 import {
   OnboardingDealershipStep,
@@ -14,6 +13,7 @@ import {
   OnboardingFeedStep,
   type OnboardingFeedStepHandle,
 } from '../components/onboarding/OnboardingFeedStep.js';
+import { OnboardingMetaStep } from '../components/onboarding/OnboardingMetaStep.js';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError } from '../types/api.js';
 
@@ -66,14 +66,15 @@ export function OnboardingPage() {
   };
 
   const handleSkipStep = async () => {
-    if (currentStep !== 2) return;
+    if (currentStep !== 2 && currentStep !== 3) return;
 
     setError(null);
 
     try {
       setIsSaving(true);
-      await updateOnboarding({ onboardingStep: 3 });
-      setCurrentStep(3);
+      const nextStep = currentStep === 2 ? 3 : 4;
+      await updateOnboarding({ onboardingStep: nextStep });
+      setCurrentStep(nextStep);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Não foi possível pular esta etapa.');
     } finally {
@@ -154,14 +155,14 @@ export function OnboardingPage() {
               <OnboardingDealershipStep ref={step1Ref} disabled={isSaving} />
             ) : currentStep === 2 ? (
               <OnboardingFeedStep ref={step2Ref} disabled={isSaving} />
+            ) : currentStep === 3 ? (
+              <OnboardingMetaStep disabled={isSaving} />
             ) : currentStep === TOTAL_STEPS ? (
               <OnboardingSummaryStep
                 onFinish={(options) => void handleFinish(options?.tab)}
                 isFinishing={isSaving}
               />
-            ) : (
-              <OnboardingStepPlaceholder step={currentStep} />
-            )}
+            ) : null}
           </div>
 
           {error && (
@@ -185,7 +186,7 @@ export function OnboardingPage() {
               ) : null}
             </div>
             <div className="flex items-center gap-2">
-              {currentStep === 2 ? (
+              {currentStep === 2 || currentStep === 3 ? (
                 <Button
                   variant="ghost"
                   size="md"
