@@ -9,7 +9,7 @@ export interface AppConfig {
 export const env: AppConfig = {
   apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3333/api/v1',
   apiTimeout: Number(import.meta.env.VITE_API_TIMEOUT) || 15000,
-  enableMockFallback: import.meta.env.VITE_ENABLE_MOCK_FALLBACK !== 'false',
+  enableMockFallback: import.meta.env.VITE_ENABLE_MOCK_FALLBACK === 'true',
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,
 };

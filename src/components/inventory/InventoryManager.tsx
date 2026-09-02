@@ -192,6 +192,28 @@ export function InventoryManager({ workspaceId, initialVehicles }: InventoryMana
               <Loader2 className="w-6 h-6 animate-spin text-brand-primary" />
               <p className="text-xs font-semibold">Carregando catálogo de veículos da API...</p>
             </div>
+          ) : !loading && vehicles.length === 0 ? (
+            <Card className="p-12 text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-brand-primary flex items-center justify-center mx-auto">
+                <Car className="w-6 h-6" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-base font-bold text-typography-heading">Inventário vazio</h3>
+                <p className="text-sm text-typography-muted max-w-md mx-auto">
+                  Nenhum veículo encontrado neste workspace. Sincronize o feed DMS ou aguarde a
+                  importação do estoque.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+                onClick={() => void loadVehiclesFromApi()}
+                loading={loading}
+              >
+                Re-Sync Estoque
+              </Button>
+            </Card>
           ) : viewMode === 'GRID' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {vehicles.map((vehicle) => {

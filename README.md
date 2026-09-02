@@ -55,14 +55,19 @@ Design System **Auto Clean Pro** (light mode), inspirado em Webmotors, Localiza 
 ```bash
 npm install
 
-# .env (opcional)
-# VITE_API_URL=http://localhost:3333/api/v1
-# VITE_ENABLE_MOCK_FALLBACK=false
+# Copie o template de ambiente (ou crie .env manualmente com as mesmas variáveis)
+cp .env.example .env
 
 npm run dev        # http://localhost:3000
 npm run typecheck
 npm run build
 ```
+
+Variáveis em `.env.example`:
+
+- `VITE_API_URL` — URL base da API (default: `http://localhost:3333/api/v1`)
+- `VITE_API_TIMEOUT` — timeout em ms (default: `15000`)
+- `VITE_ENABLE_MOCK_FALLBACK=true` — opt-in: exibe veículos demo quando a API está indisponível (desligado por default)
 
 ### Credenciais seed
 
