@@ -1,11 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { PrivateRoute, PublicAuthRoute } from './components/auth/PrivateRoute.js';
+import { PrivateRoute, PublicAuthRoute, RequireOnboardingComplete } from './components/auth/PrivateRoute.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
 import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
 import { DashboardApp } from './pages/DashboardApp.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
+import { OnboardingPage } from './pages/OnboardingPage.js';
 
 export function App() {
   return (
@@ -19,9 +20,12 @@ export function App() {
         </Route>
 
         <Route element={<PrivateRoute />}>
-          <Route path="/" element={<DashboardApp />} />
-          <Route path="/dashboard" element={<Navigate to="/" replace />} />
-          <Route path="/audit-logs" element={<AuditLogsPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route element={<RequireOnboardingComplete />}>
+            <Route path="/" element={<DashboardApp />} />
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
+            <Route path="/audit-logs" element={<AuditLogsPage />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

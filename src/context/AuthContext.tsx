@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { authService } from '../services/api/authService.js';
 import { authTokenStore } from '../services/auth/authTokenStore.js';
-import type { AuthUser, RegisterPayload } from '../types/auth.js';
+import type { AuthUser, RegisterPayload, UpdateOnboardingPayload } from '../types/auth.js';
 import { ApiError } from '../types/api.js';
 
 interface AuthContextValue {
@@ -17,9 +17,10 @@ interface AuthContextValue {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
+  register: (payload: RegisterPayload) => Promise<AuthUser>;
   logout: () => Promise<void>;
+  updateOnboarding: (payload: UpdateOnboardingPayload) => Promise<AuthUser>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -75,7 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(result.accessToken);
 
     const meResult = await authService.getMe();
-    setUser(normalizeUser(meResult.user));
+    const normalized = normalizeUser(meResult.user);
+    setUser(normalized);
+    return normalized;
   }, []);
 
   const register = useCallback(async (payload: RegisterPayload) => {
@@ -84,7 +87,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(result.accessToken);
 
     const meResult = await authService.getMe();
-    setUser(normalizeUser(meResult.user));
+    const normalized = normalizeUser(meResult.user);
+    setUser(normalized);
+    return normalized;
+  }, []);
+
+  const updateOnboarding = useCallback(async (payload: UpdateOnboardingPayload) => {
+    const meResult = await authService.patchOnboarding(payload);
+    const normalized = normalizeUser(meResult.user);
+    setUser(normalized);
+    return normalized;
   }, []);
 
   const logout = useCallback(async () => {
@@ -108,8 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      updateOnboarding,
     }),
-    [user, accessToken, isLoading, login, register, logout],
+    [user, accessToken, isLoading, login, register, logout, updateOnboarding],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

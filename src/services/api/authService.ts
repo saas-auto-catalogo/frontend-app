@@ -5,6 +5,7 @@ import type {
   MessageResponse,
   RefreshResponse,
   RegisterPayload,
+  UpdateOnboardingPayload,
 } from '../../types/auth.js';
 
 export const authService = {
@@ -38,5 +39,9 @@ export const authService = {
 
   async getMe(): Promise<MeResponse> {
     return httpClient.get<MeResponse>('/auth/me');
+  },
+
+  async patchOnboarding(payload: UpdateOnboardingPayload): Promise<MeResponse> {
+    return httpClient.patch<MeResponse>('/auth/me/onboarding', payload);
   },
 };
