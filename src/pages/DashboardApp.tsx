@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { useWorkspace } from '../hooks/useWorkspace.js';
 import { dashboardService, DashboardStats } from '../services/api/dashboardService.js';
 import { feedService, FeedConfigSummary } from '../services/api/feedService.js';
+import { metaService } from '../services/api/metaService.js';
 import { formatDurationMs, formatRelativeTime, formatSyncStatus } from '../utils/format.js';
 
 const POLL_INTERVAL_MS = 60_000;
@@ -46,6 +47,7 @@ export function DashboardApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const dealershipName = workspaceName || 'Auto Elite Motors - Matriz Jardins';
@@ -95,9 +97,29 @@ export function DashboardApp() {
   }, [workspaceId, loadDashboard]);
 
   const handleTriggerSync = async () => {
+    if (!workspaceId) return;
+
+    setSyncError(null);
+
     try {
       setIsSyncing(true);
+
+      const activeFeed = feeds.find((feed) => feed.isActive) ?? feeds[0];
+      if (!activeFeed) {
+        setSyncError('Configure um feed DMS antes de sincronizar o catálogo Meta.');
+        return;
+      }
+
+      const result = await metaService.triggerFeedSync(workspaceId, activeFeed.id);
+      if (!result.success) {
+        setSyncError(result.message);
+        return;
+      }
+
       await loadDashboard();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao sincronizar o feed DMS.';
+      setSyncError(message);
     } finally {
       setIsSyncing(false);
     }
@@ -203,12 +225,19 @@ export function DashboardApp() {
                 ) : null}
               </section>
 
+              {syncError ? (
+                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {syncError}
+                </p>
+              ) : null}
+
               {workspaceId && (
                 <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2">
                     <MetaConnectionCard
                       workspaceId={workspaceId}
                       catalogStatus={stats?.catalogStatus}
+                      activeFeedId={primaryFeed?.id}
                       onTriggerSync={handleTriggerSync}
                       isSyncing={isSyncing}
                     />
@@ -235,9 +264,15 @@ export function DashboardApp() {
 
           {activeTab === 'meta-feed' && workspaceId && (
             <div className="space-y-6">
+              {syncError ? (
+                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {syncError}
+                </p>
+              ) : null}
               <MetaConnectionCard
                 workspaceId={workspaceId}
                 catalogStatus={stats?.catalogStatus}
+                activeFeedId={primaryFeed?.id}
                 onTriggerSync={handleTriggerSync}
                 isSyncing={isSyncing}
               />
