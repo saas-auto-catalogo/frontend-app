@@ -28,7 +28,7 @@ export function AuditLogsPage() {
   const { filters, setFilters } = useAuditLogSearchParams();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const dealershipName = workspaceName || 'Auto Elite Motors - Matriz Jardins';
+  const dealershipName = workspaceName ?? 'Minha Revenda';
   const canViewAuditLog = role ? AUDIT_LOG_ROLES.has(role) : false;
 
   const handleFiltersChange = useCallback(
@@ -59,11 +59,13 @@ export function AuditLogsPage() {
       <Sidebar
         activeTab="dashboard"
         onTabChange={handleSidebarTabChange}
+        workspaceName={workspaceName}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
           dealershipName={dealershipName}
+          workspaceId={workspaceId}
           userName={user?.name}
           userInitials={user ? getUserInitials(user.name) : undefined}
           onLogout={handleLogout}

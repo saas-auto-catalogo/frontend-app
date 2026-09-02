@@ -44,13 +44,14 @@ export function DashboardApp() {
   );
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [feeds, setFeeds] = useState<FeedConfigSummary[]>([]);
+  const [publicFeedUrl, setPublicFeedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const dealershipName = workspaceName || 'Auto Elite Motors - Matriz Jardins';
+  const dealershipName = workspaceName ?? 'Minha Revenda';
 
   useEffect(() => {
     const tabFromState = (location.state as { tab?: string } | null)?.tab;
@@ -67,12 +68,14 @@ export function DashboardApp() {
 
     try {
       setError(null);
-      const [statsData, feedsData] = await Promise.all([
+      const [statsData, feedsData, catalogHealth] = await Promise.all([
         dashboardService.getStats(workspaceId),
         feedService.listFeeds(workspaceId),
+        metaService.getCatalogHealth(workspaceId),
       ]);
       setStats(statsData);
       setFeeds(feedsData);
+      setPublicFeedUrl(catalogHealth.catalog?.publicFeedUrl ?? null);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao carregar dashboard';
       setError(message);
@@ -146,11 +149,18 @@ export function DashboardApp() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         pendingIssuesCount={stats?.pendingIssuesCount ?? 0}
+        totalVehicles={stats?.totalVehicles}
+        eligibleForMetaAds={stats?.eligibleForMetaAds}
+        healthScore={stats?.healthScore}
+        workspaceName={workspaceName}
+        isLoading={loading && !stats}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header
           dealershipName={dealershipName}
+          workspaceId={workspaceId}
+          publicFeedUrl={publicFeedUrl}
           userName={user?.name}
           userInitials={user ? getUserInitials(user.name) : undefined}
           onRefreshSync={handleTriggerSync}
