@@ -44,7 +44,8 @@ export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
-  workspaceName: string;
+  workspaceName?: string;
+  checkoutSessionId?: string;
 }
 
 export interface MessageResponse {

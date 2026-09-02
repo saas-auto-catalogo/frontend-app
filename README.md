@@ -67,7 +67,9 @@ Variáveis em `.env.example`:
 
 - `VITE_API_URL` — URL base da API (default: `http://localhost:3333/api/v1`)
 - `VITE_API_TIMEOUT` — timeout em ms (default: `15000`)
-- `VITE_MARKETING_CHECKOUT_URL` — URL do checkout de planos (paywall pós-register)
+- `VITE_MARKETING_URL` — URL base do site marketing (links "tentar novamente" no cadastro pós-checkout)
+- `VITE_MARKETING_CHECKOUT_URL` — URL direta do checkout de planos (paywall e retry)
+- `VITE_CHECKOUT_SUCCESS_PATH` — path no app após checkout Stripe (default: `/register`; marketing deve redirecionar para `{APP_URL}{path}?session_id={CHECKOUT_SESSION_ID}`)
 - `VITE_ENABLE_MOCK_FALLBACK=true` — opt-in: exibe veículos demo quando a API está indisponível (desligado por default)
 
 ### Credenciais seed
