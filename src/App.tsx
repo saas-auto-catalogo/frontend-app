@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { PrivateRoute, PublicAuthRoute, RequireOnboardingComplete } from './components/auth/PrivateRoute.js';
+import { PrivateRoute, PublicAuthRoute, RequireActiveSubscription, RequireOnboardingComplete } from './components/auth/PrivateRoute.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
@@ -8,6 +8,8 @@ import { DashboardApp } from './pages/DashboardApp.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
 import { OnboardingPage } from './pages/OnboardingPage.js';
 import { MetaCallbackPage } from './pages/MetaCallbackPage.js';
+import { SubscribePage } from './pages/SubscribePage.js';
+import { BillingSettingsPage } from './pages/BillingSettingsPage.js';
 
 export function App() {
   return (
@@ -21,12 +23,17 @@ export function App() {
         </Route>
 
         <Route element={<PrivateRoute />}>
-          <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route path="/meta/callback" element={<MetaCallbackPage />} />
-          <Route element={<RequireOnboardingComplete />}>
-            <Route path="/" element={<DashboardApp />} />
-            <Route path="/dashboard" element={<Navigate to="/" replace />} />
-            <Route path="/audit-logs" element={<AuditLogsPage />} />
+          <Route path="/subscribe" element={<SubscribePage />} />
+          <Route path="/settings/billing" element={<BillingSettingsPage />} />
+
+          <Route element={<RequireActiveSubscription />}>
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/meta/callback" element={<MetaCallbackPage />} />
+            <Route element={<RequireOnboardingComplete />}>
+              <Route path="/" element={<DashboardApp />} />
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="/audit-logs" element={<AuditLogsPage />} />
+            </Route>
           </Route>
         </Route>
 

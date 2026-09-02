@@ -67,6 +67,7 @@ Variáveis em `.env.example`:
 
 - `VITE_API_URL` — URL base da API (default: `http://localhost:3333/api/v1`)
 - `VITE_API_TIMEOUT` — timeout em ms (default: `15000`)
+- `VITE_MARKETING_CHECKOUT_URL` — URL do checkout de planos (paywall pós-register)
 - `VITE_ENABLE_MOCK_FALLBACK=true` — opt-in: exibe veículos demo quando a API está indisponível (desligado por default)
 
 ### Credenciais seed

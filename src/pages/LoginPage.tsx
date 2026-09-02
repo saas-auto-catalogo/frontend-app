@@ -4,6 +4,7 @@ import { AuthLayout } from '../components/auth/AuthLayout.js';
 import { AuthFormField } from '../components/auth/AuthFormField.js';
 import { Button } from '../components/ui/Button.js';
 import { useAuth } from '../context/AuthContext.js';
+import { useSubscription } from '../context/SubscriptionContext.js';
 import { ApiError } from '../types/api.js';
 import { isValidEmail } from '../utils/validation.js';
 import { getPostAuthPath } from '../utils/auth.js';
@@ -12,6 +13,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const { refetchBilling } = useSubscription();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +49,8 @@ export function LoginPage() {
     try {
       setIsSubmitting(true);
       const user = await login(email.trim(), password);
-      navigate(getPostAuthPath(user, from), { replace: true });
+      const billing = await refetchBilling();
+      navigate(getPostAuthPath(user, billing, from), { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.message);
