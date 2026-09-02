@@ -55,11 +55,35 @@ export const DMS_PRESETS: DmsPreset[] = [
   },
   {
     id: 'custom',
-    name: 'Customizado (Manual)',
+    name: 'Customizado (XML Manual)',
     provider: 'XML Próprio da Loja',
     confidenceRate: 92.0,
     detectedRootTag: '<raiz><item>',
     endpointExample: 'https://suaconcessionaria.com.br/feed/estoque.xml',
+  },
+  {
+    id: 'base44',
+    name: 'Base44 / 4boss',
+    provider: 'Base44 Tech',
+    confidenceRate: 99.5,
+    detectedRootTag: '{ vehicles[] }',
+    endpointExample: 'https://www.4boss.com.br/api/vehicles',
+  },
+  {
+    id: 'spice_digital',
+    name: 'Spice Digital',
+    provider: 'Spice Digital',
+    confidenceRate: 99.2,
+    detectedRootTag: '{ vehicles[] }',
+    endpointExample: 'https://api.jrcaseminovos.com.br/vehicles',
+  },
+  {
+    id: 'generic_json',
+    name: 'JSON Genérico',
+    provider: 'API JSON Própria',
+    confidenceRate: 92.0,
+    detectedRootTag: '{ vehicles[] }',
+    endpointExample: 'https://api.exemplo.com/vehicles.json',
   },
 ];
 

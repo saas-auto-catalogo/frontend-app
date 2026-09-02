@@ -26,8 +26,11 @@ import {
 import { vehicleService, type Vehicle } from '../../services/api/vehicleService.js';
 import { ApiError } from '../../types/api.js';
 import {
-  presetIdToSourceType,
+  type FeedDetectedFormat,
+  getFeedValidationSuccessMessage,
+  getPresetIdsForFormat,
   resolvePresetIdFromSuggestion,
+  resolveSourceTypeForFeed,
   sourceTypeToPresetId,
 } from '../../utils/feedPresets.js';
 
@@ -57,12 +60,18 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
     const [urlStatus, setUrlStatus] = useState<'IDLE' | 'VALID' | 'INVALID'>('IDLE');
     const [validationMessage, setValidationMessage] = useState<string | null>(null);
     const [vehicleCount, setVehicleCount] = useState<number | null>(null);
+    const [detectedFormat, setDetectedFormat] = useState<FeedDetectedFormat | null>(null);
+    const [suggestedSourceType, setSuggestedSourceType] = useState<string | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [isValidatingUrl, setIsValidatingUrl] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+    const visiblePresets = DMS_PRESETS.filter((preset) =>
+      getPresetIdsForFormat(detectedFormat).includes(preset.id),
+    );
 
     const loadPreview = useCallback(async () => {
       if (!workspaceId) return;
@@ -118,6 +127,8 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
       setUrlStatus('IDLE');
       setValidationMessage(null);
       setVehicleCount(null);
+      setDetectedFormat(null);
+      setSuggestedSourceType(null);
       setFormError(null);
       setStatusMessage(null);
 
@@ -138,13 +149,15 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
 
       if (!trimmedUrl) {
         setUrlStatus('INVALID');
-        setValidationMessage('Informe uma URL do feed XML.');
+        setValidationMessage('Informe uma URL do feed.');
         return;
       }
 
       setIsValidatingUrl(true);
       setValidationMessage(null);
       setVehicleCount(null);
+      setDetectedFormat(null);
+      setSuggestedSourceType(null);
       setFormError(null);
 
       try {
@@ -153,6 +166,8 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
         if (result.valid) {
           setUrlStatus('VALID');
           setVehicleCount(result.vehicleCount ?? null);
+          setDetectedFormat(result.detectedFormat ?? null);
+          setSuggestedSourceType(result.suggestedPresetId ?? null);
           setValidationMessage(null);
 
           const suggestedPresetId = resolvePresetIdFromSuggestion(result.suggestedPresetId);
@@ -201,7 +216,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
         let feed = connectedFeed;
         if (!feed || feed.feedUrl !== trimmedUrl) {
           feed = await feedService.createFeed(workspaceId, {
-            sourceType: presetIdToSourceType(selectedPreset.id),
+            sourceType: resolveSourceTypeForFeed(selectedPreset.id, suggestedSourceType),
             feedUrl: trimmedUrl,
           });
           setConnectedFeed(feed);
@@ -217,7 +232,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
 
         const vehicles = await loadPreview();
         if (!vehicles || vehicles.length === 0) {
-          setFormError('Feed sincronizado, mas nenhum veículo foi importado. Verifique o XML.');
+          setFormError('Feed sincronizado, mas nenhum veículo foi importado. Verifique o feed.');
           return false;
         }
 
@@ -242,6 +257,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
       feedUrl,
       urlStatus,
       selectedPreset.id,
+      suggestedSourceType,
       loadPreview,
     ]);
 
@@ -280,7 +296,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
               Conexão do primeiro Feed DMS
             </h3>
             <p className="text-sm text-typography-muted">
-              Informe a URL do XML do seu estoque, teste a conexão e importe os primeiros veículos.
+              Informe a URL do feed do seu estoque (XML ou JSON), teste a conexão e importe os primeiros veículos.
             </p>
           </div>
         </div>
@@ -299,7 +315,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
 
         <div className="space-y-2">
           <label className="block text-xs font-bold text-typography-heading">
-            URL do Feed XML da Revenda
+            URL do Feed
           </label>
           <div className="flex flex-col sm:flex-row items-center gap-2">
             <div className="relative flex-1 w-full">
@@ -308,7 +324,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
                 type="url"
                 value={feedUrl}
                 onChange={(event) => handleFeedUrlChange(event.target.value)}
-                placeholder="https://suarevenda.com.br/estoque.xml"
+                placeholder="https://suarevenda.com.br/estoque.xml ou .json"
                 disabled={disabled || isConnecting}
                 className="w-full pl-9 pr-4 py-2.5 bg-surface-muted/60 border border-surface-border rounded-lg text-xs font-mono text-typography-heading focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
               />
@@ -329,9 +345,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
               <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
               <span>
                 <strong>Conexão bem-sucedida!</strong>{' '}
-                {vehicleCount != null
-                  ? `Detectamos ${vehicleCount} veículo${vehicleCount === 1 ? '' : 's'} no payload XML.`
-                  : 'Feed XML válido detectado no integrador.'}
+                {getFeedValidationSuccessMessage({ vehicleCount, detectedFormat })}
               </span>
             </div>
           )}
@@ -350,7 +364,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
               Sistema DMS compatível
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {DMS_PRESETS.slice(0, 6).map((preset) => {
+              {visiblePresets.map((preset) => {
                 const isSelected = selectedPreset.id === preset.id;
                 return (
                   <button

@@ -17,6 +17,12 @@ import { DMS_PRESETS, DmsPreset } from './DmsPresetSelector.js';
 import { useWorkspace } from '../../hooks/useWorkspace.js';
 import { feedService } from '../../services/api/feedService.js';
 import { ApiError } from '../../types/api.js';
+import {
+  type FeedDetectedFormat,
+  getFeedValidationSuccessMessage,
+  getPresetIdsForFormat,
+  resolvePresetIdFromSuggestion,
+} from '../../utils/feedPresets.js';
 
 export interface OnboardingXmlWizardProps {
   onComplete?: (feedUrl: string) => void;
@@ -32,15 +38,21 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
   const [urlStatus, setUrlStatus] = useState<'IDLE' | 'VALID' | 'INVALID'>('IDLE');
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [vehicleCount, setVehicleCount] = useState<number | null>(null);
+  const [detectedFormat, setDetectedFormat] = useState<FeedDetectedFormat | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
 
   const generatedFeedUrl = 'https://api.autocatalogo.com.br/api/v1/feeds/sec_tok_98f12ae8b10/meta-vehicles.xml';
+
+  const visiblePresets = DMS_PRESETS.filter((preset) =>
+    getPresetIdsForFormat(detectedFormat).includes(preset.id),
+  );
 
   const handleXmlUrlChange = (value: string) => {
     setXmlUrl(value);
     setUrlStatus('IDLE');
     setValidationMessage(null);
     setVehicleCount(null);
+    setDetectedFormat(null);
   };
 
   const handleTestUrl = async () => {
@@ -54,13 +66,14 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
 
     if (!trimmedUrl) {
       setUrlStatus('INVALID');
-      setValidationMessage('Informe uma URL do feed XML.');
+      setValidationMessage('Informe uma URL do feed.');
       return;
     }
 
     setIsValidatingUrl(true);
     setValidationMessage(null);
     setVehicleCount(null);
+    setDetectedFormat(null);
 
     try {
       const result = await feedService.validateUrl(workspaceId, trimmedUrl);
@@ -68,10 +81,12 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
       if (result.valid) {
         setUrlStatus('VALID');
         setVehicleCount(result.vehicleCount ?? null);
+        setDetectedFormat(result.detectedFormat ?? null);
         setValidationMessage(null);
 
-        if (result.suggestedPresetId) {
-          const suggested = DMS_PRESETS.find((p) => p.id === result.suggestedPresetId);
+        const suggestedPresetId = resolvePresetIdFromSuggestion(result.suggestedPresetId);
+        if (suggestedPresetId) {
+          const suggested = DMS_PRESETS.find((preset) => preset.id === suggestedPresetId);
           if (suggested) {
             setSelectedPreset(suggested);
           }
@@ -115,7 +130,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
               </h2>
             </div>
             <p className="text-xs text-typography-muted mt-1">
-              Conecte o XML do seu estoque em 3 etapas simples para gerar seu feed de anúncios dinâmicos.
+              Conecte o feed do seu estoque (XML ou JSON) em 3 etapas simples para gerar seu feed de anúncios dinâmicos.
             </p>
           </div>
 
@@ -137,7 +152,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
               <p className={`text-xs font-bold truncate ${currentStep >= 1 ? 'text-typography-heading' : 'text-typography-muted'}`}>
                 1. Conexão DMS
               </p>
-              <p className="text-[10px] text-typography-muted truncate">URL do XML</p>
+              <p className="text-[10px] text-typography-muted truncate">URL do Feed</p>
             </div>
           </div>
 
@@ -180,17 +195,17 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
           <div className="p-6 space-y-6">
             <div className="space-y-1">
               <h3 className="text-base font-bold text-typography-heading">
-                Passo 1: Forneça a URL do XML do seu Estoque
+                Passo 1: Forneça a URL do Feed do seu Estoque
               </h3>
               <p className="text-xs text-typography-muted">
-                Insira o link público do XML fornecido pelo seu integrador DMS (ex: AutoCerto, Altimus, Sisvag) ou faça o upload de um arquivo.
+                Insira o link público do feed fornecido pelo seu integrador DMS (XML ou JSON), como AutoCerto, Base44 ou Spice Digital.
               </p>
             </div>
 
             {/* Input da URL */}
             <div className="space-y-2">
               <label className="block text-xs font-bold text-typography-heading">
-                URL do Feed XML da Revenda
+                URL do Feed
               </label>
               <div className="flex flex-col sm:flex-row items-center gap-2">
                 <div className="relative flex-1 w-full">
@@ -199,7 +214,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
                     type="url"
                     value={xmlUrl}
                     onChange={(e) => handleXmlUrlChange(e.target.value)}
-                    placeholder="https://suarevenda.com.br/estoque.xml"
+                    placeholder="https://suarevenda.com.br/estoque.xml ou .json"
                     className="w-full pl-9 pr-4 py-2.5 bg-surface-muted/60 border border-surface-border rounded-lg text-xs font-mono text-typography-heading focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
                   />
                 </div>
@@ -219,9 +234,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
                   <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
                   <span>
                     <strong>Conexão bem-sucedida!</strong>{' '}
-                    {vehicleCount != null
-                      ? `Detectamos ${vehicleCount} veículo${vehicleCount === 1 ? '' : 's'} disponíve${vehicleCount === 1 ? 'l' : 'is'} no payload XML do integrador.`
-                      : 'Feed XML válido detectado no integrador.'}
+                    {getFeedValidationSuccessMessage({ vehicleCount, detectedFormat })}
                   </span>
                 </div>
               )}
@@ -241,7 +254,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
                 Detectamos o formato compatível com o seu sistema:
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {DMS_PRESETS.slice(0, 6).map((preset: DmsPreset) => {
+                {visiblePresets.map((preset: DmsPreset) => {
                   const isSelected = selectedPreset.id === preset.id;
                   return (
                     <div
