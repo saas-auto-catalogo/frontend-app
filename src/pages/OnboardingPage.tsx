@@ -5,6 +5,7 @@ import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { OnboardingStepper } from '../components/onboarding/OnboardingStepper.js';
 import { OnboardingStepPlaceholder } from '../components/onboarding/OnboardingStepPlaceholder.js';
+import { OnboardingSummaryStep } from '../components/onboarding/OnboardingSummaryStep.js';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError } from '../types/api.js';
 
@@ -37,6 +38,23 @@ export function OnboardingPage() {
     }
   };
 
+  const handleFinish = async (tab?: string) => {
+    setError(null);
+
+    try {
+      setIsSaving(true);
+      await updateOnboarding({ onboardingCompleted: true });
+      navigate('/', {
+        replace: true,
+        state: tab ? { tab } : undefined,
+      });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Não foi possível concluir o onboarding.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleContinue = async () => {
     setError(null);
 
@@ -54,15 +72,7 @@ export function OnboardingPage() {
       return;
     }
 
-    try {
-      setIsSaving(true);
-      await updateOnboarding({ onboardingCompleted: true });
-      navigate('/', { replace: true });
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Não foi possível concluir o onboarding.');
-    } finally {
-      setIsSaving(false);
-    }
+    await handleFinish();
   };
 
   return (
@@ -103,7 +113,14 @@ export function OnboardingPage() {
           <OnboardingStepper currentStep={currentStep} steps={ONBOARDING_STEPS} />
 
           <div key={currentStep} className="transition-opacity duration-200">
-            <OnboardingStepPlaceholder step={currentStep} />
+            {currentStep === TOTAL_STEPS ? (
+              <OnboardingSummaryStep
+                onFinish={(options) => void handleFinish(options?.tab)}
+                isFinishing={isSaving}
+              />
+            ) : (
+              <OnboardingStepPlaceholder step={currentStep} />
+            )}
           </div>
 
           {error && (
