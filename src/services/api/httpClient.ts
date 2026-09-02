@@ -69,7 +69,11 @@ export class HttpClient {
     const resolvedToken = this.resolveAuthToken(authToken);
 
     const headers = new Headers(customHeaders);
-    if (!headers.has('Content-Type') && !(fetchOptions.body instanceof FormData)) {
+    if (
+      !headers.has('Content-Type') &&
+      fetchOptions.body !== undefined &&
+      !(fetchOptions.body instanceof FormData)
+    ) {
       headers.set('Content-Type', 'application/json');
     }
     headers.set('Accept', 'application/json');

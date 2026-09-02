@@ -10,6 +10,10 @@ import {
   OnboardingDealershipStep,
   type OnboardingDealershipStepHandle,
 } from '../components/onboarding/OnboardingDealershipStep.js';
+import {
+  OnboardingFeedStep,
+  type OnboardingFeedStepHandle,
+} from '../components/onboarding/OnboardingFeedStep.js';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError } from '../types/api.js';
 
@@ -26,6 +30,7 @@ export function OnboardingPage() {
   const navigate = useNavigate();
   const { user, updateOnboarding, logout } = useAuth();
   const step1Ref = useRef<OnboardingDealershipStepHandle>(null);
+  const step2Ref = useRef<OnboardingFeedStepHandle>(null);
   const [currentStep, setCurrentStep] = useState(user?.onboardingStep ?? 1);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +65,22 @@ export function OnboardingPage() {
     }
   };
 
+  const handleSkipStep = async () => {
+    if (currentStep !== 2) return;
+
+    setError(null);
+
+    try {
+      setIsSaving(true);
+      await updateOnboarding({ onboardingStep: 3 });
+      setCurrentStep(3);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Não foi possível pular esta etapa.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleContinue = async () => {
     setError(null);
 
@@ -70,6 +91,11 @@ export function OnboardingPage() {
         if (currentStep === 1) {
           const saved = await step1Ref.current?.saveAndValidate();
           if (!saved) return;
+        }
+
+        if (currentStep === 2) {
+          const connected = await step2Ref.current?.connectAndValidate();
+          if (!connected) return;
         }
 
         const nextStep = currentStep + 1;
@@ -126,6 +152,8 @@ export function OnboardingPage() {
           <div key={currentStep} className="transition-opacity duration-200">
             {currentStep === 1 ? (
               <OnboardingDealershipStep ref={step1Ref} disabled={isSaving} />
+            ) : currentStep === 2 ? (
+              <OnboardingFeedStep ref={step2Ref} disabled={isSaving} />
             ) : currentStep === TOTAL_STEPS ? (
               <OnboardingSummaryStep
                 onFinish={(options) => void handleFinish(options?.tab)}
@@ -156,21 +184,33 @@ export function OnboardingPage() {
                 </Button>
               ) : null}
             </div>
-            <Button
-              variant="primary"
-              size="md"
-              icon={
-                currentStep === TOTAL_STEPS ? (
-                  <CheckCircle2 className="w-4 h-4" />
-                ) : (
-                  <ArrowRight className="w-4 h-4" />
-                )
-              }
-              onClick={() => void handleContinue()}
-              loading={isSaving}
-            >
-              {currentStep === TOTAL_STEPS ? 'Concluir' : 'Continuar'}
-            </Button>
+            <div className="flex items-center gap-2">
+              {currentStep === 2 ? (
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onClick={() => void handleSkipStep()}
+                  disabled={isSaving}
+                >
+                  Pular por agora
+                </Button>
+              ) : null}
+              <Button
+                variant="primary"
+                size="md"
+                icon={
+                  currentStep === TOTAL_STEPS ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : (
+                    <ArrowRight className="w-4 h-4" />
+                  )
+                }
+                onClick={() => void handleContinue()}
+                loading={isSaving}
+              >
+                {currentStep === TOTAL_STEPS ? 'Concluir' : 'Continuar'}
+              </Button>
+            </div>
           </div>
         </div>
       </main>
