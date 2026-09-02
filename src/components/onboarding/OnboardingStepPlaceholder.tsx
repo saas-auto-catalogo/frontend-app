@@ -2,13 +2,11 @@ import { Card } from '../ui/Card.js';
 import { Sparkles } from 'lucide-react';
 
 const STEP_ISSUES: Record<number, string> = {
-  1: '#34 — Dados da Revenda',
   2: '#35 — Conexão do Feed DMS',
   3: '#36 — Meta Ads',
 };
 
 const STEP_TITLES: Record<number, string> = {
-  1: 'Dados da Revenda e logotipo',
   2: 'Conexão do primeiro Feed DMS',
   3: 'Conexão Meta Ads',
 };

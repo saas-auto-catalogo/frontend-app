@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Badge } from '../components/ui/Badge.js';
@@ -6,6 +6,10 @@ import { Button } from '../components/ui/Button.js';
 import { OnboardingStepper } from '../components/onboarding/OnboardingStepper.js';
 import { OnboardingStepPlaceholder } from '../components/onboarding/OnboardingStepPlaceholder.js';
 import { OnboardingSummaryStep } from '../components/onboarding/OnboardingSummaryStep.js';
+import {
+  OnboardingDealershipStep,
+  type OnboardingDealershipStepHandle,
+} from '../components/onboarding/OnboardingDealershipStep.js';
 import { useAuth } from '../context/AuthContext.js';
 import { ApiError } from '../types/api.js';
 
@@ -21,6 +25,7 @@ const TOTAL_STEPS = ONBOARDING_STEPS.length;
 export function OnboardingPage() {
   const navigate = useNavigate();
   const { user, updateOnboarding, logout } = useAuth();
+  const step1Ref = useRef<OnboardingDealershipStepHandle>(null);
   const [currentStep, setCurrentStep] = useState(user?.onboardingStep ?? 1);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,9 +64,15 @@ export function OnboardingPage() {
     setError(null);
 
     if (currentStep < TOTAL_STEPS) {
-      const nextStep = currentStep + 1;
       try {
         setIsSaving(true);
+
+        if (currentStep === 1) {
+          const saved = await step1Ref.current?.saveAndValidate();
+          if (!saved) return;
+        }
+
+        const nextStep = currentStep + 1;
         await updateOnboarding({ onboardingStep: nextStep });
         setCurrentStep(nextStep);
       } catch (err) {
@@ -113,7 +124,9 @@ export function OnboardingPage() {
           <OnboardingStepper currentStep={currentStep} steps={ONBOARDING_STEPS} />
 
           <div key={currentStep} className="transition-opacity duration-200">
-            {currentStep === TOTAL_STEPS ? (
+            {currentStep === 1 ? (
+              <OnboardingDealershipStep ref={step1Ref} disabled={isSaving} />
+            ) : currentStep === TOTAL_STEPS ? (
               <OnboardingSummaryStep
                 onFinish={(options) => void handleFinish(options?.tab)}
                 isFinishing={isSaving}
