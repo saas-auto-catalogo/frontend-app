@@ -5,24 +5,40 @@ export interface HeaderProps {
   dealershipName?: string;
   userName?: string;
   userInitials?: string;
+  workspaceId?: string;
+  publicFeedUrl?: string | null;
   onRefreshSync?: () => void;
   isSyncing?: boolean;
   onLogout?: () => void;
   isLoggingOut?: boolean;
 }
 
+function formatWorkspaceId(workspaceId?: string): string | null {
+  if (!workspaceId) return null;
+  if (workspaceId.length <= 12) return workspaceId;
+  return `${workspaceId.slice(0, 8)}…`;
+}
+
 export function Header({
-  dealershipName = 'Auto Elite Motors - Matriz Jardins',
+  dealershipName = 'Minha Revenda',
   userName,
-  userInitials = 'FB',
+  userInitials = 'U',
+  workspaceId,
+  publicFeedUrl,
   onRefreshSync,
   isSyncing = false,
   onLogout,
   isLoggingOut = false,
 }: HeaderProps) {
+  const workspaceIdLabel = formatWorkspaceId(workspaceId);
+
+  const handleOpenFeed = () => {
+    if (!publicFeedUrl) return;
+    window.open(publicFeedUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <header className="bg-surface-card border-b border-surface-border h-16 px-6 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-subtle">
-      {/* Informações da Unidade / Loja */}
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-surface-muted border border-surface-border text-typography-heading">
           <Store className="w-4 h-4 text-brand-primary" />
@@ -36,13 +52,16 @@ export function Header({
               <span className="w-2 h-2 rounded-full bg-brand-accent animate-pulse" />
               Sincronização em tempo real ativa
             </span>
-            <span>•</span>
-            <span className="font-mono">ID: AE-JARDINS-SP</span>
+            {workspaceIdLabel ? (
+              <>
+                <span>•</span>
+                <span className="font-mono">ID: {workspaceIdLabel}</span>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
 
-      {/* Busca Rápida Global */}
       <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
         <div className="relative w-full">
           <Search className="w-4 h-4 text-typography-subtle absolute left-3 top-1/2 -translate-y-1/2" />
@@ -54,7 +73,6 @@ export function Header({
         </div>
       </div>
 
-      {/* Ações & Controles do Lojista */}
       <div className="flex items-center gap-2.5">
         <Button
           variant="primary"
@@ -62,6 +80,7 @@ export function Header({
           icon={<RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />}
           onClick={onRefreshSync}
           loading={isSyncing}
+          disabled={!onRefreshSync}
         >
           Sincronizar Estoque DMS
         </Button>
@@ -70,14 +89,19 @@ export function Header({
           variant="outline"
           size="sm"
           icon={<ExternalLink className="w-3.5 h-3.5" />}
-          onClick={() => window.open('/api/v1/feeds/sec_tok_98f12ae8b10/meta-vehicles.xml', '_blank')}
+          onClick={handleOpenFeed}
+          disabled={!publicFeedUrl}
+          title={
+            publicFeedUrl
+              ? 'Abrir feed XML Meta do catálogo'
+              : 'Configure o catálogo Meta para obter a URL do feed'
+          }
         >
           Feed XML Meta
         </Button>
 
         <div className="h-6 w-[1px] bg-surface-border mx-1" />
 
-        {/* Notificações & Perfil */}
         <button className="p-2 text-typography-muted hover:text-typography-heading hover:bg-surface-muted rounded-md relative transition-colors">
           <Bell className="w-4 h-4" />
           <span className="w-2 h-2 rounded-full bg-brand-price absolute top-1.5 right-1.5" />
