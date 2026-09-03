@@ -56,7 +56,10 @@ export function OnboardingPage() {
       await updateOnboarding({ onboardingCompleted: true });
       navigate('/', {
         replace: true,
-        state: tab ? { tab } : undefined,
+        state: {
+          ...(tab ? { tab } : {}),
+          refreshDashboard: true,
+        },
       });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Não foi possível concluir o onboarding.');
