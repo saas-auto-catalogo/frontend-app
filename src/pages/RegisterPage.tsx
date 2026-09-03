@@ -40,7 +40,7 @@ export function RegisterPage() {
   const [isClearingSession, setIsClearingSession] = useState(false);
 
   useEffect(() => {
-    if (!isTrialRegister || !isAuthenticated) return;
+    if (!isAuthenticated) return;
 
     let cancelled = false;
 
@@ -63,7 +63,7 @@ export function RegisterPage() {
     return () => {
       cancelled = true;
     };
-  }, [isTrialRegister, isAuthenticated, logout, setBilling]);
+  }, [isAuthenticated, logout, setBilling]);
 
   const [name, setName] = useState('');
 
