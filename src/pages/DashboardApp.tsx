@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar.js';
 import { Header } from '../components/layout/Header.js';
 import { MetricCard } from '../components/ui/MetricCard.js';
@@ -35,8 +35,13 @@ function getUserInitials(name: string): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function DashboardApp() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { workspaceId, workspaceName } = useWorkspace();
   const [activeTab, setActiveTab] = useState<string>(
@@ -51,6 +56,7 @@ export function DashboardApp() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const refreshHandledRef = useRef(false);
 
   const dealershipName = workspaceName ?? 'Minha Revenda';
 
@@ -61,29 +67,51 @@ export function DashboardApp() {
     }
   }, [location.state]);
 
-  const loadDashboard = useCallback(async () => {
-    if (!workspaceId) {
-      setLoading(false);
-      return;
-    }
+  const loadDashboard = useCallback(
+    async (retryIfStale = false) => {
+      if (!workspaceId) {
+        setLoading(false);
+        return;
+      }
 
-    try {
-      setError(null);
-      const [statsData, feedsData, catalogHealth] = await Promise.all([
-        dashboardService.getStats(workspaceId),
-        feedService.listFeeds(workspaceId),
-        metaService.getCatalogHealth(workspaceId),
-      ]);
-      setStats(statsData);
-      setFeeds(feedsData);
-      setPublicFeedUrl(catalogHealth.catalog?.publicFeedUrl ?? null);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro ao carregar dashboard';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [workspaceId]);
+      try {
+        setError(null);
+        const [statsData, feedsData, catalogHealth] = await Promise.all([
+          dashboardService.getStats(workspaceId),
+          feedService.listFeeds(workspaceId),
+          metaService.getCatalogHealth(workspaceId),
+        ]);
+
+        let resolvedStats = statsData;
+        if (retryIfStale) {
+          const activeFeed =
+            feedsData.find((feed) => feed.isActive) ?? feedsData[0] ?? null;
+          const feedHasVehicles = (activeFeed?._count?.vehicles ?? 0) > 0;
+          if (statsData.totalVehicles === 0 && feedHasVehicles) {
+            for (let attempt = 0; attempt < 3; attempt += 1) {
+              await sleep(1000);
+              const retried = await dashboardService.getStats(workspaceId);
+              if (retried.totalVehicles > 0) {
+                resolvedStats = retried;
+                break;
+              }
+              resolvedStats = retried;
+            }
+          }
+        }
+
+        setStats(resolvedStats);
+        setFeeds(feedsData);
+        setPublicFeedUrl(catalogHealth.catalog?.publicFeedUrl ?? null);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Erro ao carregar dashboard';
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [workspaceId],
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -99,6 +127,22 @@ export function DashboardApp() {
 
     return () => clearInterval(intervalId);
   }, [workspaceId, loadDashboard]);
+
+  useEffect(() => {
+    const state = location.state as { tab?: string; refreshDashboard?: boolean } | null;
+    if (!state?.refreshDashboard || refreshHandledRef.current) return;
+
+    refreshHandledRef.current = true;
+    setLoading(true);
+    void loadDashboard(true).then(() => {
+      setInventoryRefreshKey((prev) => prev + 1);
+    });
+
+    navigate('.', {
+      replace: true,
+      state: state.tab ? { tab: state.tab } : undefined,
+    });
+  }, [location.state, loadDashboard, navigate]);
 
   const handleTriggerSync = async () => {
     if (!workspaceId) return;
