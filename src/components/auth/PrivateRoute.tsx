@@ -78,8 +78,10 @@ export function PublicAuthRoute() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { billing, isLoading: isBillingLoading, refetchBilling } = useSubscription();
   const location = useLocation();
-  const isTrialRegisterRoute =
-    location.pathname === '/register' && new URLSearchParams(location.search).get('plan') === 'trial';
+  const isRegisterRoute = location.pathname === '/register';
+
+  const canAccessRegisterWithoutActiveSubscription =
+    isRegisterRoute && (!billing || billing.status === 'NONE');
 
   useEffect(() => {
     if (isAuthenticated && user && !billing && !isBillingLoading) {
@@ -95,7 +97,7 @@ export function PublicAuthRoute() {
     );
   }
 
-  if (isAuthenticated && user && !isTrialRegisterRoute) {
+  if (isAuthenticated && user && !canAccessRegisterWithoutActiveSubscription) {
     return <Navigate to={getPostAuthPath(user, billing)} replace />;
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CreditCard, LogOut } from 'lucide-react';
+import { ArrowLeft, CreditCard, LogOut } from 'lucide-react';
 import { clsx } from 'clsx';
 import { AuthLayout } from '../components/auth/AuthLayout.js';
 import { Button } from '../components/ui/Button.js';
@@ -23,7 +23,7 @@ export function SubscribePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
-  const { billing, refetchBilling } = useSubscription();
+  const { billing, refetchBilling, setBilling } = useSubscription();
   const { workspaceId } = useWorkspace();
 
   const [selectedPlan, setSelectedPlan] = useState<PlanTier>(() =>
@@ -35,6 +35,7 @@ export function SubscribePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [acceptContract, setAcceptContract] = useState(false);
   const [legalError, setLegalError] = useState<string | null>(null);
+  const [isResettingRegistration, setIsResettingRegistration] = useState(false);
 
   const isExpiredTrial = billing?.status === 'EXPIRED';
 
@@ -122,6 +123,17 @@ export function SubscribePage() {
       navigate('/login', { replace: true });
     } finally {
       setIsLoggingOut(false);
+    }
+  };
+
+  const handleRestartRegistration = async () => {
+    try {
+      setIsResettingRegistration(true);
+      await logout();
+      setBilling(null);
+      navigate(`/register?plan=${encodeURIComponent(selectedPlan)}`, { replace: true });
+    } finally {
+      setIsResettingRegistration(false);
     }
   };
 
@@ -267,6 +279,15 @@ export function SubscribePage() {
             loading={isLoggingOut}
           >
             Sair
+          </Button>
+          <Button
+            variant="ghost"
+            size="md"
+            icon={<ArrowLeft className="w-4 h-4" />}
+            onClick={() => void handleRestartRegistration()}
+            loading={isResettingRegistration}
+          >
+            Errou algum dado? Sair e cadastrar outra revenda
           </Button>
         </div>
       </div>
