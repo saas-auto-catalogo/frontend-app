@@ -11,6 +11,10 @@ import { ApiError } from '../types/api.js';
 
 function getStatusLabel(status: string): string {
   switch (status) {
+    case 'TRIALING':
+      return 'Período de teste';
+    case 'EXPIRED':
+      return 'Teste expirado';
     case 'PAST_DUE':
       return 'Pagamento em atraso';
     case 'CANCELED':

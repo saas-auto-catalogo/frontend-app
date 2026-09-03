@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext.js';
 import { useSubscription } from '../../context/SubscriptionContext.js';
 import { getPostAuthPath } from '../../utils/auth.js';
 import { getSubscriptionGatePath, isActiveSubscription } from '../../utils/subscription.js';
+import { TrialBanner } from '../billing/TrialBanner.js';
 
 function AuthLoadingSpinner({ message = 'Carregando sessão...' }: { message?: string }) {
   return (
@@ -55,7 +56,12 @@ export function RequireActiveSubscription() {
     }
   }
 
-  return <Outlet />;
+  return (
+    <>
+      <TrialBanner />
+      <Outlet />
+    </>
+  );
 }
 
 export function RequireOnboardingComplete() {
@@ -71,6 +77,9 @@ export function RequireOnboardingComplete() {
 export function PublicAuthRoute() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { billing, isLoading: isBillingLoading, refetchBilling } = useSubscription();
+  const location = useLocation();
+  const isTrialRegisterRoute =
+    location.pathname === '/register' && new URLSearchParams(location.search).get('plan') === 'trial';
 
   useEffect(() => {
     if (isAuthenticated && user && !billing && !isBillingLoading) {
@@ -86,7 +95,7 @@ export function PublicAuthRoute() {
     );
   }
 
-  if (isAuthenticated && user) {
+  if (isAuthenticated && user && !isTrialRegisterRoute) {
     return <Navigate to={getPostAuthPath(user, billing)} replace />;
   }
 

@@ -8,13 +8,20 @@ import type {
   UpdateOnboardingPayload,
 } from '../../types/auth.js';
 
+export interface RegisterOptions {
+  plan?: 'trial';
+}
+
 export const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     return httpClient.post<LoginResponse>('/auth/login', { email, password }, { skipAuthRefresh: true });
   },
 
-  async register(payload: RegisterPayload): Promise<LoginResponse> {
-    return httpClient.post<LoginResponse>('/auth/register', payload, { skipAuthRefresh: true });
+  async register(payload: RegisterPayload, options?: RegisterOptions): Promise<LoginResponse> {
+    return httpClient.post<LoginResponse>('/auth/register', payload, {
+      skipAuthRefresh: true,
+      params: options?.plan ? { plan: options.plan } : undefined,
+    });
   },
 
   async refresh(): Promise<RefreshResponse> {

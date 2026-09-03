@@ -8,6 +8,7 @@ export type SubscriptionStatus =
   | 'NONE'
   | 'ACTIVE'
   | 'TRIALING'
+  | 'EXPIRED'
   | 'PAST_DUE'
   | 'CANCELED'
   | 'SUSPENDED';

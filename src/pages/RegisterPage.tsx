@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthLayout } from '../components/auth/AuthLayout.js';
 import { AuthFormField } from '../components/auth/AuthFormField.js';
@@ -13,8 +13,32 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const selectedPlan = searchParams.get('plan');
-  const { register } = useAuth();
-  const { refetchBilling } = useSubscription();
+  const isTrialRegister = selectedPlan === 'trial';
+  const { register, logout, isAuthenticated } = useAuth();
+  const { refetchBilling, setBilling } = useSubscription();
+  const [isClearingSession, setIsClearingSession] = useState(false);
+
+  useEffect(() => {
+    if (!isTrialRegister || !isAuthenticated) return;
+
+    let cancelled = false;
+    const clearSessionForTrialRegister = async () => {
+      setIsClearingSession(true);
+      try {
+        await logout();
+        setBilling(null);
+      } finally {
+        if (!cancelled) {
+          setIsClearingSession(false);
+        }
+      }
+    };
+
+    void clearSessionForTrialRegister();
+    return () => {
+      cancelled = true;
+    };
+  }, [isTrialRegister, isAuthenticated, logout, setBilling]);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -66,14 +90,20 @@ export function RegisterPage() {
 
     try {
       setIsSubmitting(true);
-      const user = await register({
-        name: name.trim(),
-        email: email.trim(),
-        password,
-        workspaceName: workspaceName.trim(),
-      });
-      const billing = await refetchBilling();
-      navigate(resolvePostAuthNavigatePath(user, billing, '/', selectedPlan), { replace: true });
+      const session = await register(
+        {
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          workspaceName: workspaceName.trim(),
+        },
+        isTrialRegister ? { plan: 'trial' } : undefined,
+      );
+      const billing = session.billing ?? (await refetchBilling());
+      if (session.billing) {
+        setBilling(session.billing);
+      }
+      navigate(resolvePostAuthNavigatePath(session.user, billing, '/', selectedPlan), { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.message);
@@ -85,10 +115,28 @@ export function RegisterPage() {
     }
   };
 
+  if (isClearingSession) {
+    return (
+      <AuthLayout title="Preparando cadastro trial" subtitle="Encerrando a sessão anterior...">
+        <div className="flex justify-center py-8">
+          <div className="w-8 h-8 rounded-full border-2 border-brand-primary border-t-transparent animate-spin" />
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout
-      title="Criar sua conta"
-      subtitle="Cadastre sua revenda e comece a publicar seu catálogo."
+      title={
+        isTrialRegister
+          ? 'Crie sua conta — 14 dias grátis no plano Pro, sem cartão'
+          : 'Criar sua conta'
+      }
+      subtitle={
+        isTrialRegister
+          ? 'Cadastre sua revenda e comece a usar o catálogo sem pagamento agora.'
+          : 'Cadastre sua revenda e comece a publicar seu catálogo.'
+      }
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {formError ? (
@@ -166,4 +214,5 @@ export function RegisterPage() {
     </AuthLayout>
   );
 }
+
 

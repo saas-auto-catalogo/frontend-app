@@ -1,3 +1,5 @@
+import type { WorkspaceBilling } from '../services/api/billingService.js';
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -28,6 +30,12 @@ export interface LoginResponse {
   expiresIn: number;
   tokenType: string;
   user: AuthUser;
+  billing?: WorkspaceBilling;
+}
+
+export interface AuthSession {
+  user: AuthUser;
+  billing?: WorkspaceBilling | null;
 }
 
 export interface RefreshResponse {

@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar.js';
 import { Header } from '../components/layout/Header.js';
-import { TrialBanner } from '../components/ui/TrialBanner.js';
-import { useSubscription } from '../context/SubscriptionContext.js';
 import { MetricCard } from '../components/ui/MetricCard.js';
 import { MetricCardSkeleton } from '../components/ui/MetricCardSkeleton.js';
 import { DataFetchError } from '../components/ui/DataFetchError.js';
@@ -40,7 +38,6 @@ function getUserInitials(name: string): string {
 export function DashboardApp() {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { billing } = useSubscription();
   const { workspaceId, workspaceName } = useWorkspace();
   const [activeTab, setActiveTab] = useState<string>(
     (location.state as { tab?: string } | null)?.tab ?? 'dashboard',
@@ -171,7 +168,6 @@ export function DashboardApp() {
           onLogout={handleLogout}
           isLoggingOut={isLoggingOut}
         />
-        <TrialBanner />
 
         <main className="flex-1 p-6 space-y-6 max-w-7xl w-full mx-auto">
           {activeTab === 'dashboard' && (
@@ -200,6 +196,7 @@ export function DashboardApp() {
                         isPositive: stats.newVehiclesThisMonth > 0,
                       }}
                     />
+
                     <MetricCard
                       title="Elegíveis no Meta DAA"
                       value={`${stats.eligibleForMetaAds} veículos`}
@@ -211,6 +208,7 @@ export function DashboardApp() {
                       }}
                       variant="accent"
                     />
+
                     <MetricCard
                       title="Pendências de Dados"
                       value={`${stats.pendingIssuesCount} veículos`}
@@ -222,6 +220,7 @@ export function DashboardApp() {
                       }}
                       variant="primary"
                     />
+
                     <MetricCard
                       title="Última Sincronização"
                       value={formatRelativeTime(lastSyncAt)}
