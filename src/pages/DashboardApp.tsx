@@ -49,6 +49,7 @@ export function DashboardApp() {
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const dealershipName = workspaceName ?? 'Minha Revenda';
@@ -120,6 +121,7 @@ export function DashboardApp() {
       }
 
       await loadDashboard();
+      setInventoryRefreshKey((prev) => prev + 1);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao sincronizar o feed DMS.';
       setSyncError(message);
@@ -170,6 +172,12 @@ export function DashboardApp() {
         />
 
         <main className="flex-1 p-6 space-y-6 max-w-7xl w-full mx-auto">
+          {syncError ? (
+            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {syncError}
+            </p>
+          ) : null}
+
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               {error && !stats && (
@@ -235,12 +243,6 @@ export function DashboardApp() {
                 ) : null}
               </section>
 
-              {syncError ? (
-                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  {syncError}
-                </p>
-              ) : null}
-
               {workspaceId && (
                 <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2">
@@ -268,17 +270,12 @@ export function DashboardApp() {
 
           {activeTab === 'inventory' && workspaceId && (
             <div className="space-y-6">
-              <InventoryManager workspaceId={workspaceId} />
+              <InventoryManager workspaceId={workspaceId} refreshKey={inventoryRefreshKey} />
             </div>
           )}
 
           {activeTab === 'meta-feed' && workspaceId && (
             <div className="space-y-6">
-              {syncError ? (
-                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  {syncError}
-                </p>
-              ) : null}
               <MetaConnectionCard
                 workspaceId={workspaceId}
                 catalogStatus={stats?.catalogStatus}

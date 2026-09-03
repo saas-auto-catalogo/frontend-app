@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card } from '../ui/Card.js';
 import { VehicleCard } from '../ui/VehicleCard.js';
 import { InventoryTable } from './InventoryTable.js';
@@ -18,6 +18,7 @@ import { vehicleService, Vehicle } from '../../services/api/vehicleService.js';
 export interface InventoryManagerProps {
   workspaceId: string;
   initialVehicles?: VehicleAdData[];
+  refreshKey?: number;
 }
 
 function mapVehicleToAdData(v: Vehicle): VehicleAdData {
@@ -40,7 +41,11 @@ function mapVehicleToAdData(v: Vehicle): VehicleAdData {
   };
 }
 
-export function InventoryManager({ workspaceId, initialVehicles }: InventoryManagerProps) {
+export function InventoryManager({
+  workspaceId,
+  initialVehicles,
+  refreshKey,
+}: InventoryManagerProps) {
   const [vehicles, setVehicles] = useState<VehicleAdData[]>(initialVehicles || []);
   const [loading, setLoading] = useState<boolean>(!initialVehicles || initialVehicles.length === 0);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +56,7 @@ export function InventoryManager({ workspaceId, initialVehicles }: InventoryMana
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleAdData | null>(
     initialVehicles && initialVehicles.length > 0 ? initialVehicles[0] : null,
   );
+  const prevRefreshKey = useRef(refreshKey);
 
   const loadVehiclesFromApi = useCallback(async () => {
     if (!workspaceId) return;
@@ -85,6 +91,14 @@ export function InventoryManager({ workspaceId, initialVehicles }: InventoryMana
     }, 250);
     return () => clearTimeout(timer);
   }, [loadVehiclesFromApi]);
+
+  useEffect(() => {
+    if (refreshKey === undefined) return;
+    if (prevRefreshKey.current === refreshKey) return;
+
+    prevRefreshKey.current = refreshKey;
+    void loadVehiclesFromApi();
+  }, [refreshKey, loadVehiclesFromApi]);
 
   if (!workspaceId) {
     return (
