@@ -54,7 +54,16 @@ export interface ValidateFeedUrlResult {
 }
 
 const SYNC_POLL_INTERVAL_MS = 2000;
-const SYNC_POLL_TIMEOUT_MS = 60_000;
+const SYNC_POLL_TIMEOUT_MS = 120_000;
+
+export interface WaitForSyncJobOptions {
+  timeoutMs?: number;
+  onProgress?: (job: SyncJobStatusResponse) => void;
+}
+
+export function computeSyncTimeout(estimatedTimeSeconds?: number): number {
+  return Math.max(SYNC_POLL_TIMEOUT_MS, (estimatedTimeSeconds ?? 0) * 1000);
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -101,12 +110,17 @@ export const feedService = {
     workspaceId: string,
     feedId: string,
     jobId: string,
-    timeoutMs = SYNC_POLL_TIMEOUT_MS,
+    options: WaitForSyncJobOptions = {},
   ): Promise<SyncJobStatusResponse> {
+    const { timeoutMs = SYNC_POLL_TIMEOUT_MS, onProgress } = options;
     const startedAt = Date.now();
 
     while (Date.now() - startedAt < timeoutMs) {
       const status = await this.getSyncJobStatus(workspaceId, feedId, jobId);
+
+      if (onProgress) {
+        onProgress(status);
+      }
 
       if (status.status === 'completed' || status.status === 'failed') {
         return status;
@@ -115,6 +129,8 @@ export const feedService = {
       await sleep(SYNC_POLL_INTERVAL_MS);
     }
 
-    throw new Error('Tempo esgotado aguardando a sincronização do feed.');
+    throw new Error(
+      'A sincronização está demorando mais que o esperado. Verifique se o worker de processamento está ativo ou tente novamente.',
+    );
   },
 };

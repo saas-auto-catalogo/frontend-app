@@ -3,7 +3,7 @@ import {
   type CatalogStatus,
   type MetaCatalogSummary,
 } from './dashboardService.js';
-import { feedService } from './feedService.js';
+import { feedService, computeSyncTimeout } from './feedService.js';
 
 export interface CatalogHealthData {
   healthScore: number;
@@ -65,7 +65,10 @@ export const metaService = {
 
   async triggerFeedSync(workspaceId: string, feedId: string): Promise<TriggerSyncResponse> {
     const syncJob = await feedService.triggerSync(workspaceId, feedId);
-    const result = await feedService.waitForSyncJob(workspaceId, feedId, syncJob.jobId);
+    const timeoutMs = computeSyncTimeout(syncJob.estimatedTimeSeconds);
+    const result = await feedService.waitForSyncJob(workspaceId, feedId, syncJob.jobId, {
+      timeoutMs,
+    });
 
     if (result.status === 'failed') {
       return {

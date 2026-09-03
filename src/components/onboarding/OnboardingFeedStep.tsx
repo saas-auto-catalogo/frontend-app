@@ -3,15 +3,18 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useRef,
   useState,
 } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
+  Clock,
   Link,
   RefreshCw,
   Rss,
   Sparkles,
+  Timer,
 } from 'lucide-react';
 import { Button } from '../ui/Button.js';
 import { Card } from '../ui/Card.js';
@@ -21,6 +24,7 @@ import { DMS_PRESETS, type DmsPreset } from '../xml-mapper/DmsPresetSelector.js'
 import { useWorkspace } from '../../hooks/useWorkspace.js';
 import {
   feedService,
+  computeSyncTimeout,
   type FeedConfigSummary,
 } from '../../services/api/feedService.js';
 import { vehicleService, type Vehicle } from '../../services/api/vehicleService.js';
@@ -50,6 +54,12 @@ function findPresetById(presetId: string): DmsPreset {
   return DMS_PRESETS.find((preset) => preset.id === presetId) ?? DMS_PRESETS[0];
 }
 
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, OnboardingFeedStepProps>(
   function OnboardingFeedStep({ disabled = false }, ref) {
     const { workspaceId } = useWorkspace();
@@ -68,6 +78,23 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
     const [isValidatingUrl, setIsValidatingUrl] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
+    const [syncJobStatus, setSyncJobStatus] = useState<'waiting' | 'active' | 'completed' | null>(
+      null,
+    );
+    const [syncProgress, setSyncProgress] = useState<number | null>(null);
+    const [syncElapsed, setSyncElapsed] = useState(0);
+    const syncElapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const clearSyncTimer = useCallback(() => {
+      if (syncElapsedRef.current) {
+        clearInterval(syncElapsedRef.current);
+        syncElapsedRef.current = null;
+      }
+    }, []);
+
+    useEffect(() => {
+      return () => clearSyncTimer();
+    }, [clearSyncTimer]);
 
     const visiblePresets = DMS_PRESETS.filter((preset) =>
       getPresetIdsForFormat(detectedFormat).includes(preset.id),
@@ -193,6 +220,9 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
     const connectAndValidate = useCallback(async (): Promise<boolean> => {
       setFormError(null);
       setStatusMessage(null);
+      setSyncJobStatus(null);
+      setSyncProgress(null);
+      setSyncElapsed(0);
 
       if (!workspaceId) {
         setFormError('Workspace não encontrado. Faça login novamente.');
@@ -211,6 +241,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
 
       try {
         setIsConnecting(true);
+        setSyncJobStatus('waiting');
         setStatusMessage('Criando feed e sincronizando estoque...');
 
         let feed = connectedFeed;
@@ -223,7 +254,24 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
         }
 
         const syncJob = await feedService.triggerSync(workspaceId, feed.id);
-        const syncResult = await feedService.waitForSyncJob(workspaceId, feed.id, syncJob.jobId);
+        const timeoutMs = computeSyncTimeout(syncJob.estimatedTimeSeconds);
+
+        setSyncJobStatus('active');
+        setSyncElapsed(0);
+        syncElapsedRef.current = setInterval(() => {
+          setSyncElapsed((prev) => prev + 1);
+        }, 1000);
+
+        const syncResult = await feedService.waitForSyncJob(workspaceId, feed.id, syncJob.jobId, {
+          timeoutMs,
+          onProgress: (job) => {
+            setSyncProgress(job.progress ?? null);
+          },
+        });
+
+        clearSyncTimer();
+        setSyncJobStatus('completed');
+        setSyncProgress(100);
 
         if (syncResult.status === 'failed') {
           setFormError(syncResult.failedReason ?? 'Falha ao sincronizar o feed.');
@@ -239,6 +287,8 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
         setStatusMessage(`${vehicles.length} veículo(s) importados com sucesso.`);
         return true;
       } catch (err) {
+        clearSyncTimer();
+        setSyncJobStatus(null);
         if (err instanceof ApiError) {
           setFormError(err.message);
         } else if (err instanceof Error) {
@@ -259,6 +309,7 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
       selectedPreset.id,
       suggestedSourceType,
       loadPreview,
+      clearSyncTimer,
     ]);
 
     useImperativeHandle(ref, () => ({ connectAndValidate }), [connectAndValidate]);
@@ -397,10 +448,46 @@ export const OnboardingFeedStep = forwardRef<OnboardingFeedStepHandle, Onboardin
           </div>
         )}
 
-        {isConnecting ? (
-          <div className="p-4 rounded-lg border border-surface-border bg-surface-muted/40 flex items-center gap-3 text-sm text-typography-muted">
-            <RefreshCw className="w-4 h-4 animate-spin text-brand-primary" />
-            Sincronizando feed e importando veículos...
+        {isConnecting && syncJobStatus ? (
+          <div className="p-4 rounded-lg border border-surface-border bg-surface-muted/40 space-y-3">
+            <div className="flex items-center gap-3 text-sm text-typography-muted">
+              {syncJobStatus === 'completed' ? (
+                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+              ) : syncJobStatus === 'active' ? (
+                <RefreshCw className="w-4 h-4 animate-spin text-brand-primary shrink-0" />
+              ) : (
+                <Clock className="w-4 h-4 text-brand-primary animate-pulse shrink-0" />
+              )}
+              <span>
+                {syncJobStatus === 'waiting'
+                  ? 'Aguardando processamento…'
+                  : syncJobStatus === 'active'
+                    ? 'Importando veículos…'
+                    : 'Sincronização concluída'}
+              </span>
+            </div>
+
+            {syncJobStatus === 'active' && syncProgress !== null ? (
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px] text-typography-muted">
+                  <span>Progresso</span>
+                  <span>{syncProgress}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-surface-border rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-brand-primary rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(syncProgress, 100)}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {syncJobStatus !== 'completed' ? (
+              <div className="flex items-center gap-1.5 text-[11px] text-typography-muted">
+                <Timer className="w-3 h-3" />
+                <span>Tempo: {formatElapsed(syncElapsed)}</span>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
