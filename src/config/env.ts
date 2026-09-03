@@ -4,6 +4,7 @@ export interface AppConfig {
   enableMockFallback: boolean;
   isDev: boolean;
   isProd: boolean;
+  marketingUrl: string;
 }
 
 export const env: AppConfig = {
@@ -12,4 +13,5 @@ export const env: AppConfig = {
   enableMockFallback: import.meta.env.VITE_ENABLE_MOCK_FALLBACK === 'true',
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,
+  marketingUrl: import.meta.env.VITE_MARKETING_URL || 'https://autocatalogo.com.br',
 };
