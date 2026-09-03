@@ -53,6 +53,12 @@ export interface RegisterPayload {
   email: string;
   password: string;
   workspaceName: string;
+  legalAcceptances: Array<{
+    slug: string;
+    version: string;
+    contentHash: string;
+    acceptedAt: string;
+  }>;
 }
 
 export interface MessageResponse {
