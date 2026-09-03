@@ -20,6 +20,7 @@ interface SubscriptionContextValue {
   isLoading: boolean;
   error: string | null;
   refetchBilling: () => Promise<WorkspaceBilling | null>;
+  setBilling: (billing: WorkspaceBilling | null) => void;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | undefined>(undefined);
@@ -38,9 +39,14 @@ function createSuperAdminBilling(workspaceId: string): WorkspaceBilling {
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const { workspaceId } = useWorkspace();
-  const [billing, setBilling] = useState<WorkspaceBilling | null>(null);
+  const [billing, setBillingState] = useState<WorkspaceBilling | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const setBilling = useCallback((nextBilling: WorkspaceBilling | null) => {
+    setBillingState(nextBilling);
+    setError(null);
+  }, []);
 
   const refetchBilling = useCallback(async (): Promise<WorkspaceBilling | null> => {
     if (!isAuthenticated || !user) {
@@ -79,7 +85,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, user, workspaceId]);
+  }, [isAuthenticated, user, workspaceId, setBilling]);
 
   useEffect(() => {
     void refetchBilling();
@@ -91,8 +97,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       isLoading,
       error,
       refetchBilling,
+      setBilling,
     }),
-    [billing, isLoading, error, refetchBilling],
+    [billing, isLoading, error, refetchBilling, setBilling],
   );
 
   return (

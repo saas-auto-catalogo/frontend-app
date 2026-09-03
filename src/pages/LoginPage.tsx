@@ -15,7 +15,7 @@ export function LoginPage() {
   const [searchParams] = useSearchParams();
   const selectedPlan = searchParams.get('plan');
   const { login } = useAuth();
-  const { refetchBilling } = useSubscription();
+  const { refetchBilling, setBilling } = useSubscription();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -50,9 +50,12 @@ export function LoginPage() {
 
     try {
       setIsSubmitting(true);
-      const user = await login(email.trim(), password);
-      const billing = await refetchBilling();
-      navigate(resolvePostAuthNavigatePath(user, billing, from, selectedPlan), { replace: true });
+      const session = await login(email.trim(), password);
+      const billing = session.billing ?? (await refetchBilling());
+      if (session.billing) {
+        setBilling(session.billing);
+      }
+      navigate(resolvePostAuthNavigatePath(session.user, billing, from, selectedPlan), { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.message);
@@ -122,4 +125,5 @@ export function LoginPage() {
     </AuthLayout>
   );
 }
+
 

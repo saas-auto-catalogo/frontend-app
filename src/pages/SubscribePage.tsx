@@ -29,6 +29,14 @@ export function SubscribePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  const isExpiredTrial = billing?.status === 'EXPIRED';
+
+  useEffect(() => {
+    if (isExpiredTrial) {
+      setSelectedPlan('PRO');
+    }
+  }, [isExpiredTrial]);
+
   useEffect(() => {
     const planFromQuery = searchParams.get('plan');
     if (planFromQuery) {
@@ -97,8 +105,12 @@ export function SubscribePage() {
 
   return (
     <AuthLayout
-      title="Contrate um plano para continuar"
-      subtitle="Escolha o plano ideal e conclua o pagamento para liberar o onboarding."
+      title={isExpiredTrial ? 'Seu teste grátis terminou' : 'Contrate um plano para continuar'}
+      subtitle={
+        isExpiredTrial
+          ? 'Contrate um plano para continuar usando o catálogo.'
+          : 'Escolha o plano ideal e conclua o pagamento para liberar o onboarding.'
+      }
     >
       <div className="space-y-6">
         <div className="rounded-lg border border-surface-border bg-surface-muted/40 p-4 flex items-start gap-3">
@@ -106,10 +118,13 @@ export function SubscribePage() {
             <CreditCard className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-typography-heading">Assinatura necessária</p>
+            <p className="text-sm font-semibold text-typography-heading">
+              {isExpiredTrial ? 'Período de teste encerrado' : 'Assinatura necessária'}
+            </p>
             <p className="text-sm text-typography-muted">
-              Seu workspace ainda não possui um plano ativo. Após o pagamento no Stripe, você será
-              redirecionado automaticamente.
+              {isExpiredTrial
+                ? 'Seu acesso ao teste grátis expirou. Escolha um plano e conclua o pagamento no Stripe para retomar o uso.'
+                : 'Seu workspace ainda não possui um plano ativo. Após o pagamento no Stripe, você será redirecionado automaticamente.'}
             </p>
           </div>
         </div>
@@ -203,4 +218,5 @@ export function SubscribePage() {
     </AuthLayout>
   );
 }
+
 

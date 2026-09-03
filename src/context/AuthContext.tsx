@@ -7,9 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { authService } from '../services/api/authService.js';
+import { authService, type RegisterOptions } from '../services/api/authService.js';
 import { authTokenStore } from '../services/auth/authTokenStore.js';
-import type { AuthUser, RegisterPayload, UpdateOnboardingPayload } from '../types/auth.js';
+import type { AuthUser, AuthSession, RegisterPayload, UpdateOnboardingPayload } from '../types/auth.js';
 import { ApiError } from '../types/api.js';
 
 interface AuthContextValue {
@@ -17,8 +17,8 @@ interface AuthContextValue {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<AuthUser>;
-  register: (payload: RegisterPayload) => Promise<AuthUser>;
+  login: (email: string, password: string) => Promise<AuthSession>;
+  register: (payload: RegisterPayload, options?: RegisterOptions) => Promise<AuthSession>;
   logout: () => Promise<void>;
   updateOnboarding: (payload: UpdateOnboardingPayload) => Promise<AuthUser>;
 }
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void bootstrap();
   }, [clearSession]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<AuthSession> => {
     const result = await authService.login(email, password);
     authTokenStore.setAccessToken(result.accessToken);
     setAccessToken(result.accessToken);
@@ -78,18 +78,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const meResult = await authService.getMe();
     const normalized = normalizeUser(meResult.user);
     setUser(normalized);
-    return normalized;
+    return { user: normalized, billing: result.billing ?? null };
   }, []);
 
-  const register = useCallback(async (payload: RegisterPayload) => {
-    const result = await authService.register(payload);
+  const register = useCallback(async (payload: RegisterPayload, options?: RegisterOptions): Promise<AuthSession> => {
+    const result = await authService.register(payload, options);
     authTokenStore.setAccessToken(result.accessToken);
     setAccessToken(result.accessToken);
 
     const meResult = await authService.getMe();
     const normalized = normalizeUser(meResult.user);
     setUser(normalized);
-    return normalized;
+    return { user: normalized, billing: result.billing ?? null };
   }, []);
 
   const updateOnboarding = useCallback(async (payload: UpdateOnboardingPayload) => {
