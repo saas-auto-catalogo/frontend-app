@@ -28,8 +28,20 @@ export const LEGAL_ACCEPTANCE_DOCUMENTS: LegalAcceptanceDocument[] = [
   },
 ];
 
+export const SUBSCRIBE_LEGAL_DOCUMENT: LegalAcceptanceDocument = {
+  slug: 'contrato-saas',
+  version: '2026-09-02',
+  contentHash: 'sha256:4eb7821b4807f014475bcb0ddf1994a1bedccccc27cccdaf22b5ad1cb8c7a57c',
+  prefix: 'Li e aceito o ',
+  anchor: 'Contrato SaaS',
+  suffix: '.',
+};
+
 export const REGISTER_LEGAL_REQUIRED_ERROR =
   'Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.';
+
+export const SUBSCRIBE_LEGAL_REQUIRED_ERROR =
+  'Para continuar com a contratação, aceite o Contrato SaaS.';
 
 export function legalDocumentUrl(slug: string): string {
   return `${env.marketingUrl}/legal/${slug}`;

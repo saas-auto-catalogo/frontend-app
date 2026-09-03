@@ -6,6 +6,12 @@ export interface CreateWorkspaceCheckoutSessionPayload {
   billingInterval: BillingInterval;
   successUrl: string;
   cancelUrl: string;
+  legalAcceptances: Array<{
+    slug: string;
+    version: string;
+    contentHash: string;
+    acceptedAt: string;
+  }>;
 }
 
 export interface CheckoutSessionResponse {
