@@ -88,6 +88,7 @@ export function OnboardingPage() {
     if (currentStep < TOTAL_STEPS) {
       try {
         setIsSaving(true);
+        const stepBefore = currentStep;
 
         if (currentStep === 1) {
           const saved = await step1Ref.current?.saveAndValidate();
@@ -98,6 +99,8 @@ export function OnboardingPage() {
           const connected = await step2Ref.current?.connectAndValidate();
           if (!connected) return;
         }
+
+        if (currentStep !== stepBefore) return;
 
         const nextStep = currentStep + 1;
         await updateOnboarding({ onboardingStep: nextStep });
@@ -191,7 +194,6 @@ export function OnboardingPage() {
                   variant="ghost"
                   size="md"
                   onClick={() => void handleSkipStep()}
-                  disabled={isSaving}
                 >
                   Pular por agora
                 </Button>
