@@ -11,6 +11,11 @@ import { MetaCallbackPage } from './pages/MetaCallbackPage.js';
 import { SubscribePage } from './pages/SubscribePage.js';
 import { SubscribeSuccessPage } from './pages/SubscribeSuccessPage.js';
 import { BillingSettingsPage } from './pages/BillingSettingsPage.js';
+import { SettingsLayout } from './pages/settings/SettingsLayout.js';
+import { ProfileSettingsTab } from './pages/settings/tabs/ProfileSettingsTab.js';
+import { SecuritySettingsTab } from './pages/settings/tabs/SecuritySettingsTab.js';
+import { TeamSettingsTab } from './pages/settings/tabs/TeamSettingsTab.js';
+import { BillingSettingsTab } from './pages/settings/tabs/BillingSettingsTab.js';
 
 export function App() {
   return (
@@ -31,6 +36,14 @@ export function App() {
           <Route path="/subscribe" element={<SubscribePage />} />
           <Route path="/subscribe/success" element={<SubscribeSuccessPage />} />
           <Route path="/settings/billing" element={<BillingSettingsPage />} />
+
+          <Route path="/settings" element={<SettingsLayout />}>
+            <Route index element={<Navigate to="/settings/profile" replace />} />
+            <Route path="profile" element={<ProfileSettingsTab />} />
+            <Route path="security" element={<SecuritySettingsTab />} />
+            <Route path="team" element={<TeamSettingsTab />} />
+            <Route path="billing" element={<BillingSettingsTab />} />
+          </Route>
 
           <Route element={<RequireActiveSubscription />}>
             <Route path="/onboarding" element={<OnboardingPage />} />
