@@ -38,6 +38,34 @@ export interface PortalSessionResponse {
   url: string;
 }
 
+export interface InvoiceItem {
+  id: string;
+  number: string;
+  createdAt: string;
+  amount: number;
+  currency: string;
+  status: string;
+  pdfUrl: string | null;
+  hostedUrl: string | null;
+}
+
+export interface InvoicesPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface InvoicesResponse {
+  items: InvoiceItem[];
+  pagination: InvoicesPagination;
+}
+
+export interface ListInvoicesOptions {
+  page?: number;
+  limit?: number;
+}
+
 export const billingService = {
   async getWorkspaceBilling(workspaceId: string): Promise<WorkspaceBilling> {
     return httpClient.get<WorkspaceBilling>(`/workspaces/${workspaceId}/billing`);
@@ -45,6 +73,20 @@ export const billingService = {
 
   async createPortalSession(returnUrl: string): Promise<PortalSessionResponse> {
     return httpClient.post<PortalSessionResponse>('/billing/portal', { returnUrl });
+  },
+
+  async getInvoices(
+    workspaceId: string,
+    options?: ListInvoicesOptions,
+  ): Promise<InvoicesResponse> {
+    const params: Record<string, string | number | boolean | undefined> = {
+      page: options?.page,
+      limit: options?.limit,
+    };
+    return httpClient.get<InvoicesResponse>(
+      `/workspaces/${workspaceId}/billing/invoices`,
+      { params },
+    );
   },
 
   async createWorkspaceCheckoutSession(
