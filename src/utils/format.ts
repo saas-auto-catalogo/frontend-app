@@ -45,3 +45,26 @@ export function formatDurationMs(ms: number | null | undefined): string {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}s`;
 }
+
+export function formatCurrencyCents(cents: number, currency?: string): string {
+  if (currency && currency.toUpperCase() !== 'BRL') {
+    return `${currency.toUpperCase()} ${(cents / 100).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+  return (cents / 100).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
+
+export function formatDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
