@@ -21,6 +21,8 @@ interface AuthContextValue {
   register: (payload: RegisterPayload, options?: RegisterOptions) => Promise<AuthSession>;
   logout: () => Promise<void>;
   updateOnboarding: (payload: UpdateOnboardingPayload) => Promise<AuthUser>;
+  updateProfile: (payload: { name?: string; avatarUrl?: string | null }) => Promise<AuthUser>;
+  refreshUser: () => Promise<AuthUser | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -99,6 +101,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return normalized;
   }, []);
 
+  const updateProfile = useCallback(
+    async (payload: { name?: string; avatarUrl?: string | null }): Promise<AuthUser> => {
+      const meResult = await authService.patchMe(payload);
+      const normalized = normalizeUser(meResult.user);
+      setUser(normalized);
+      return normalized;
+    },
+    [],
+  );
+
+  const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
+    try {
+      const meResult = await authService.getMe();
+      const normalized = normalizeUser(meResult.user);
+      setUser(normalized);
+      return normalized;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authService.logout();
@@ -121,8 +144,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       updateOnboarding,
+      updateProfile,
+      refreshUser,
     }),
-    [user, accessToken, isLoading, login, register, logout, updateOnboarding],
+    [user, accessToken, isLoading, login, register, logout, updateOnboarding, updateProfile, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
