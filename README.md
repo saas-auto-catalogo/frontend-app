@@ -1,4 +1,6 @@
-# SaaS Auto Catálogo — Frontend App
+# SaaS Auto Catálogo — Frontend App
+
+[![CI](https://github.com/saas-auto-catalogo/frontend-app/actions/workflows/ci.yml/badge.svg)](https://github.com/saas-auto-catalogo/frontend-app/actions/workflows/ci.yml)
 
 Painel web do lojista (SPA): dashboard com métricas reais, inventário, catálogo Meta, pendências de catálogo, timeline de atividades e XML Mapper.
 
