@@ -10,7 +10,6 @@ import { OnboardingPage } from './pages/OnboardingPage.js';
 import { MetaCallbackPage } from './pages/MetaCallbackPage.js';
 import { SubscribePage } from './pages/SubscribePage.js';
 import { SubscribeSuccessPage } from './pages/SubscribeSuccessPage.js';
-import { BillingSettingsPage } from './pages/BillingSettingsPage.js';
 import { SettingsLayout } from './pages/settings/SettingsLayout.js';
 import { ProfileSettingsTab } from './pages/settings/tabs/ProfileSettingsTab.js';
 import { SecuritySettingsTab } from './pages/settings/tabs/SecuritySettingsTab.js';
@@ -35,7 +34,6 @@ export function App() {
         <Route element={<PrivateRoute />}>
           <Route path="/subscribe" element={<SubscribePage />} />
           <Route path="/subscribe/success" element={<SubscribeSuccessPage />} />
-          <Route path="/settings/billing" element={<BillingSettingsPage />} />
 
           <Route path="/settings" element={<SettingsLayout />}>
             <Route index element={<Navigate to="/settings/profile" replace />} />

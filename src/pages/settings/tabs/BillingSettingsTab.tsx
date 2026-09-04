@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   CreditCard,
   ExternalLink,
@@ -12,6 +13,8 @@ import {
   Headphones,
   RefreshCw,
   FileX2,
+  Info,
+  X,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../../../components/ui/Card.js';
 import { Button } from '../../../components/ui/Button.js';
@@ -75,6 +78,8 @@ function getInvoiceStatusBadgeClasses(status: string): string {
 }
 
 export function BillingSettingsTab() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isMockPortal = searchParams.get('mock_portal') === '1';
   const { role, workspaceId } = useWorkspace();
   const { billing, isLoading: billingLoading, refetchBilling } = useSubscription();
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
@@ -155,6 +160,35 @@ export function BillingSettingsTab() {
 
   return (
     <div className="space-y-6">
+      {isMockPortal && (
+        <div className="flex items-start justify-between gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 shrink-0 mt-0.5">
+              <Info className="w-4 h-4" />
+            </div>
+            <div className="text-xs space-y-1">
+              <p className="font-semibold text-sm text-blue-950">
+                Stripe Customer Portal — Modo Simulação Ativo
+              </p>
+              <p className="text-blue-800 leading-relaxed">
+                Em ambiente de produção com chaves reais da Stripe, este botão redireciona o cliente para o painel de autoatendimento hospedado da Stripe (para gerenciar cartões, cancelar ou alterar plano). Como a aplicação local está configurada com <code className="bg-blue-100/80 px-1 py-0.5 rounded font-mono text-[11px]">STRIPE_MOCK=true</code>, a sessão foi simulada com sucesso sem expirar nem gerar erro 404.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              searchParams.delete('mock_portal');
+              setSearchParams(searchParams, { replace: true });
+            }}
+            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-100 transition-colors shrink-0"
+            title="Fechar aviso"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Seção 1 — Assinatura Ativa & Ações */}
       <Card>
         <CardHeader>
