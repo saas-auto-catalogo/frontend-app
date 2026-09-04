@@ -1,4 +1,4 @@
-import { Search, Bell, ExternalLink, RefreshCw, Store, LogOut } from 'lucide-react';
+﻿import { Search, Bell, ExternalLink, RefreshCw, Store, LogOut, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../ui/Button.js';
 
 export interface HeaderProps {
@@ -9,6 +9,7 @@ export interface HeaderProps {
   publicFeedUrl?: string | null;
   onRefreshSync?: () => void;
   isSyncing?: boolean;
+  onConfigureMeta?: () => void;
   onLogout?: () => void;
   isLoggingOut?: boolean;
 }
@@ -27,6 +28,7 @@ export function Header({
   publicFeedUrl,
   onRefreshSync,
   isSyncing = false,
+  onConfigureMeta,
   onLogout,
   isLoggingOut = false,
 }: HeaderProps) {
@@ -85,20 +87,33 @@ export function Header({
           Sincronizar Estoque DMS
         </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          icon={<ExternalLink className="w-3.5 h-3.5" />}
-          onClick={handleOpenFeed}
-          disabled={!publicFeedUrl}
-          title={
-            publicFeedUrl
-              ? 'Abrir feed XML Meta do catálogo'
-              : 'Configure o catálogo Meta para obter a URL do feed'
-          }
-        >
-          Feed XML Meta
-        </Button>
+        {publicFeedUrl ? (
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<ExternalLink className="w-3.5 h-3.5" />}
+            onClick={handleOpenFeed}
+            title="Abrir feed XML Meta Atom DAA do catálogo"
+          >
+            Feed XML Meta
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<SlidersHorizontal className="w-3.5 h-3.5" />}
+            onClick={onConfigureMeta}
+            disabled={!onConfigureMeta}
+            title="Clique para configurar o catálogo Meta Ads e ativar seu feed XML"
+          >
+            <span className="flex items-center gap-1.5">
+              Feed XML Meta
+              <span className="text-[10px] font-semibold uppercase bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded">
+                Configurar
+              </span>
+            </span>
+          </Button>
+        )}
 
         <div className="h-6 w-[1px] bg-surface-border mx-1" />
 

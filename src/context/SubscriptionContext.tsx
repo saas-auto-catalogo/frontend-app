@@ -18,6 +18,7 @@ import {
 interface SubscriptionContextValue {
   billing: WorkspaceBilling | null;
   isLoading: boolean;
+  hasInitialized: boolean;
   error: string | null;
   refetchBilling: () => Promise<WorkspaceBilling | null>;
   setBilling: (billing: WorkspaceBilling | null) => void;
@@ -40,8 +41,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const { workspaceId } = useWorkspace();
   const [billing, setBillingState] = useState<WorkspaceBilling | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingState, setIsLoadingState] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Enquanto houver um usuário autenticado e o primeiro carregamento de billing ainda não
+  // tiver sido resolvido, mantém isLoading=true para que os guards de assinatura aguardem em
+  // vez de redirecionar precocemente (ex.: retorno do OAuth Meta com full page reload).
+  const isLoading = isAuthenticated && !hasInitialized ? true : isLoadingState;
 
   const setBilling = useCallback((nextBilling: WorkspaceBilling | null) => {
     setBillingState(nextBilling);
@@ -52,14 +59,16 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !user) {
       setBilling(null);
       setError(null);
-      setIsLoading(false);
+      setHasInitialized(true);
+      setIsLoadingState(false);
       return null;
     }
 
     if (!workspaceId) {
       setBilling(null);
       setError(null);
-      setIsLoading(false);
+      setHasInitialized(true);
+      setIsLoadingState(false);
       return null;
     }
 
@@ -67,12 +76,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const synthetic = createSuperAdminBilling(workspaceId);
       setBilling(synthetic);
       setError(null);
-      setIsLoading(false);
+      setHasInitialized(true);
+      setIsLoadingState(false);
       return synthetic;
     }
 
     try {
-      setIsLoading(true);
+      setIsLoadingState(true);
       setError(null);
       const data = await billingService.getWorkspaceBilling(workspaceId);
       setBilling(data);
@@ -83,7 +93,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setBilling(null);
       return null;
     } finally {
-      setIsLoading(false);
+      setIsLoadingState(false);
+      setHasInitialized(true);
     }
   }, [isAuthenticated, user, workspaceId, setBilling]);
 
@@ -91,15 +102,23 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     void refetchBilling();
   }, [refetchBilling]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      setHasInitialized(false);
+      setIsLoadingState(false);
+    }
+  }, [isAuthenticated]);
+
   const value = useMemo<SubscriptionContextValue>(
     () => ({
       billing,
       isLoading,
+      hasInitialized,
       error,
       refetchBilling,
       setBilling,
     }),
-    [billing, isLoading, error, refetchBilling, setBilling],
+    [billing, isLoading, hasInitialized, error, refetchBilling, setBilling],
   );
 
   return (

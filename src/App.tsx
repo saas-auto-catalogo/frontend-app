@@ -16,6 +16,10 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Rota do Meta OAuth Callback — mantida na raiz sem guards intermediários para evitar qualquer flash redirect */}
+        <Route path="/meta/callback" element={<MetaCallbackPage />} />
+        <Route path="/meta/callback/" element={<MetaCallbackPage />} />
+
         <Route element={<PublicAuthRoute />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -30,7 +34,6 @@ export function App() {
 
           <Route element={<RequireActiveSubscription />}>
             <Route path="/onboarding" element={<OnboardingPage />} />
-            <Route path="/meta/callback" element={<MetaCallbackPage />} />
             <Route element={<RequireOnboardingComplete />}>
               <Route path="/" element={<DashboardApp />} />
               <Route path="/dashboard" element={<Navigate to="/" replace />} />

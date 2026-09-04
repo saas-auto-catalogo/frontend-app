@@ -12,22 +12,47 @@ export interface MetaCallbackPayload {
   catalogName?: string;
 }
 
+export interface MetaBusinessAccount {
+  id: string;
+  name: string;
+  verificationStatus?: string;
+}
+
 export interface MetaCatalogItem {
   id: string;
   name: string;
   vertical?: string;
   productCount?: number;
   feedCount?: number;
+  businessId?: string;
+  businessName?: string;
 }
 
 export interface MetaCallbackResponse {
   success: boolean;
   workspaceId: string;
-  tokenType: string;
-  expiresInSeconds?: number;
-  businessAccountsCount: number;
-  catalogsFound: number;
+  businesses: MetaBusinessAccount[];
   catalogs: MetaCatalogItem[];
+  suggestedCatalogName: string;
+  metaSessionToken: string;
+}
+
+export interface SelectCatalogPayload {
+  workspaceId: string;
+  metaSessionToken: string;
+  catalogId?: string;
+  catalogName?: string;
+  createNew?: boolean;
+  businessId?: string;
+}
+
+export interface SelectCatalogResponse {
+  success: boolean;
+  workspaceId: string;
+  catalogId: string;
+  catalogName: string;
+  created: boolean;
+  businessId?: string | null;
 }
 
 export function getMetaOAuthRedirectUri(): string {
@@ -47,5 +72,9 @@ export const metaIntegrationService = {
 
   async completeCallback(payload: MetaCallbackPayload): Promise<MetaCallbackResponse> {
     return httpClient.post<MetaCallbackResponse>('/integrations/meta/callback', payload);
+  },
+
+  async selectCatalog(payload: SelectCatalogPayload): Promise<SelectCatalogResponse> {
+    return httpClient.post<SelectCatalogResponse>('/integrations/meta/select-catalog', payload);
   },
 };
