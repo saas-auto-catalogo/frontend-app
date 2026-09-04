@@ -51,4 +51,8 @@ export const authService = {
   async patchOnboarding(payload: UpdateOnboardingPayload): Promise<MeResponse> {
     return httpClient.patch<MeResponse>('/auth/me/onboarding', payload);
   },
+
+  async patchMe(payload: { name?: string; avatarUrl?: string | null }): Promise<MeResponse> {
+    return httpClient.patch<MeResponse>('/auth/me', payload);
+  },
 };
