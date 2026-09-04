@@ -36,6 +36,7 @@ function mapVehicleToAdData(v: Vehicle): VehicleAdData {
     transmission: v.transmission,
     licensePlate: v.licensePlate,
     imageUrl: v.imageUrl,
+    heroImageUrl: v.heroImageUrl || v.imageUrl,
     armored: v.armored,
     hasWarranty: v.hasWarranty,
   };
@@ -57,6 +58,17 @@ export function InventoryManager({
     initialVehicles && initialVehicles.length > 0 ? initialVehicles[0] : null,
   );
   const prevRefreshKey = useRef(refreshKey);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [paginationMeta, setPaginationMeta] = useState(() => ({
+    total: initialVehicles?.length ?? 0,
+    page: 1,
+    limit: 20,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  }));
+  const [availableMakes, setAvailableMakes] = useState<string[]>([]);
 
   const loadVehiclesFromApi = useCallback(async () => {
     if (!workspaceId) return;
@@ -65,10 +77,13 @@ export function InventoryManager({
       setLoading(true);
       setError(null);
       const res = await vehicleService.listVehicles(workspaceId, {
+        page,
+        limit,
         search: searchQuery || undefined,
         make: selectedMake !== 'ALL' ? selectedMake : undefined,
         fuelType: selectedFuel !== 'ALL' ? selectedFuel : undefined,
       });
+      setPaginationMeta(res.pagination);
 
       const formattedVehicles = res.items.map(mapVehicleToAdData);
       setVehicles(formattedVehicles);
@@ -83,7 +98,7 @@ export function InventoryManager({
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, searchQuery, selectedMake, selectedFuel]);
+  }, [workspaceId, searchQuery, selectedMake, selectedFuel, page, limit]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -100,6 +115,18 @@ export function InventoryManager({
     void loadVehiclesFromApi();
   }, [refreshKey, loadVehiclesFromApi]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedMake, selectedFuel, limit]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    vehicleService
+      .listVehicleMakes(workspaceId)
+      .then(setAvailableMakes)
+      .catch(() => setAvailableMakes([]));
+  }, [workspaceId]);
+
   if (!workspaceId) {
     return (
       <Card className="p-8 text-center text-sm text-typography-muted">
@@ -108,7 +135,8 @@ export function InventoryManager({
     );
   }
 
-  const makes = Array.from(new Set(vehicles.map((v) => v.make)));
+  const startItem = paginationMeta.total === 0 ? 0 : (paginationMeta.page - 1) * paginationMeta.limit + 1;
+  const endItem = Math.min(paginationMeta.page * paginationMeta.limit, paginationMeta.total);
 
   if (error && vehicles.length === 0) {
     return <DataFetchError message={error} onRetry={loadVehiclesFromApi} />;
@@ -135,8 +163,8 @@ export function InventoryManager({
               onChange={(e) => setSelectedMake(e.target.value)}
               className="text-xs px-3 py-2 bg-surface-muted/60 border border-surface-border rounded-md text-typography-body focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium"
             >
-              <option value="ALL">Todas as Marcas ({makes.length || 'Todas'})</option>
-              {makes.map((m) => (
+              <option value="ALL">Todas as Marcas ({availableMakes.length || "Todas"})</option>
+              {availableMakes.map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>
@@ -193,7 +221,7 @@ export function InventoryManager({
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-typography-heading flex items-center gap-2">
               <Car className="w-4 h-4 text-brand-primary" />
-              <span>Inventário da Revenda ({vehicles.length} veículos)</span>
+              <span>Inventário da Revenda ({paginationMeta.total} veículos no estoque)</span>
             </h2>
 
             <span className="text-xs text-typography-muted">
@@ -259,6 +287,80 @@ export function InventoryManager({
               />
             </Card>
           )}
+        {paginationMeta.total > 0 ? (
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-surface-border bg-white px-4 py-3">
+
+            <span className="text-xs text-typography-muted">
+
+              Exibindo {startItem} a {endItem} de {paginationMeta.total} veículos
+
+            </span>
+
+            <div className="flex items-center gap-2">
+
+              <Button
+
+                variant="outline"
+
+                size="sm"
+
+                disabled={!paginationMeta.hasPrevPage}
+
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+
+              >
+
+                Anterior
+
+              </Button>
+
+              <span className="text-xs font-medium text-typography-body">
+
+                Página {paginationMeta.page} de {paginationMeta.totalPages}
+
+              </span>
+
+              <Button
+
+                variant="outline"
+
+                size="sm"
+
+                disabled={!paginationMeta.hasNextPage}
+
+                onClick={() => setPage((p) => p + 1)}
+
+              >
+
+                Próxima
+
+              </Button>
+
+              <select
+
+                value={limit}
+
+                onChange={(e) => setLimit(Number(e.target.value))}
+
+                className="text-xs px-3 py-2 bg-surface-muted/60 border border-surface-border rounded-md text-typography-body focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium"
+
+              >
+
+                <option value={20}>20</option>
+
+                <option value={50}>50</option>
+
+                <option value={100}>100</option>
+
+              </select>
+
+            </div>
+
+          </div>
+
+        ) : null}
+
         </div>
 
         <div className="lg:col-span-5 sticky top-20">
