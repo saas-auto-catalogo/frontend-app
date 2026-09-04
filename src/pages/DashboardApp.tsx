@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 
 import { XmlMapperStudio } from '../components/xml-mapper/XmlMapperStudio.js';
@@ -56,7 +57,10 @@ export function DashboardApp() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [metaOAuthMessage, setMetaOAuthMessage] = useState<string | null>(null);
+  const [metaOAuthResult, setMetaOAuthResult] = useState<'success' | 'error' | null>(null);
   const refreshHandledRef = useRef(false);
+  const metaFeedSectionRef = useRef<HTMLDivElement>(null);
 
   const dealershipName = workspaceName ?? 'Minha Revenda';
 
@@ -66,6 +70,33 @@ export function DashboardApp() {
       setActiveTab(tabFromState);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    if (activeTab === 'meta-feed') {
+      metaFeedSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const state = location.state as { metaOAuthResult?: 'success' | 'error'; message?: string } | null;
+    if (!state?.metaOAuthResult) return;
+
+    setMetaOAuthResult(state.metaOAuthResult);
+    setMetaOAuthMessage(state.message ?? null);
+    navigate('.', {
+      replace: true,
+      state: { tab: 'meta-feed' },
+    });
+  }, [location.state, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    if (code && state) {
+      navigate(`/meta/callback${location.search}`, { replace: true });
+    }
+  }, [location.search, navigate]);
 
   const loadDashboard = useCallback(
     async (retryIfStale = false) => {
@@ -211,6 +242,7 @@ export function DashboardApp() {
           userInitials={user ? getUserInitials(user.name) : undefined}
           onRefreshSync={handleTriggerSync}
           isSyncing={isSyncing}
+          onConfigureMeta={() => setActiveTab('meta-feed')}
           onLogout={handleLogout}
           isLoggingOut={isLoggingOut}
         />
@@ -319,7 +351,34 @@ export function DashboardApp() {
           )}
 
           {activeTab === 'meta-feed' && workspaceId && (
-            <div className="space-y-6">
+            <div className="space-y-6" ref={metaFeedSectionRef}>
+              {metaOAuthMessage && metaOAuthResult ? (
+                <div
+                  className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${
+                    metaOAuthResult === 'success'
+                      ? 'bg-green-50 border-green-200 text-green-800'
+                      : 'bg-red-50 border-red-200 text-red-800'
+                  }`}
+                >
+                  {metaOAuthResult === 'success' ? (
+                    <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-green-600" />
+                  ) : (
+                    <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-red-600" />
+                  )}
+                  <div className="flex-1 text-sm">{metaOAuthMessage}</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMetaOAuthMessage(null);
+                      setMetaOAuthResult(null);
+                    }}
+                    className="shrink-0 text-current opacity-60 hover:opacity-100 transition-opacity"
+                    aria-label="Fechar aviso"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : null}
               <MetaConnectionCard
                 workspaceId={workspaceId}
                 catalogStatus={stats?.catalogStatus}

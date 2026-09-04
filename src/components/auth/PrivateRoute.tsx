@@ -34,14 +34,14 @@ export function PrivateRoute() {
 
 export function RequireActiveSubscription() {
   const { user } = useAuth();
-  const { billing, isLoading } = useSubscription();
+  const { billing, isLoading, hasInitialized } = useSubscription();
   const location = useLocation();
 
   if (user?.isSuperAdmin) {
     return <Outlet />;
   }
 
-  if (isLoading) {
+  if (isLoading || !hasInitialized) {
     return <AuthLoadingSpinner message="Verificando assinatura..." />;
   }
 
