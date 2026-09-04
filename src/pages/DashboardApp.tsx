@@ -72,6 +72,12 @@ export function DashboardApp() {
   }, [location.state]);
 
   useEffect(() => {
+    if (activeTab === 'settings') {
+      navigate('/settings', { replace: true });
+    }
+  }, [activeTab, navigate]);
+
+  useEffect(() => {
     if (activeTab === 'meta-feed') {
       metaFeedSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -402,7 +408,7 @@ export function DashboardApp() {
             </div>
           )}
 
-          {(activeTab === 'sync-dms' || activeTab === 'reports' || activeTab === 'settings') && (
+          {(activeTab === 'sync-dms' || activeTab === 'reports') && (
             <div className="p-12 text-center bg-surface-card rounded-lg border border-surface-border space-y-4">
               <div className="w-12 h-12 rounded-full bg-blue-50 text-brand-primary flex items-center justify-center mx-auto">
                 <ShieldCheck className="w-6 h-6" />
