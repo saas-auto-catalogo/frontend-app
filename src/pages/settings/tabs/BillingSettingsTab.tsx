@@ -139,6 +139,10 @@ export function BillingSettingsTab() {
       setError(null);
       const returnUrl = `${window.location.origin}/settings/billing`;
       const session = await billingService.createPortalSession(returnUrl);
+      if (session.url.includes('/p/session/bps_')) {
+        setSearchParams({ mock_portal: '1' }, { replace: true });
+        return;
+      }
       window.location.href = session.url;
     } catch (err: unknown) {
       const message =
