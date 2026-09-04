@@ -19,6 +19,7 @@ export interface Vehicle {
   color?: string;
   doors?: number;
   imageUrl: string;
+  heroImageUrl?: string;
   status: 'AVAILABLE' | 'RESERVED' | 'SOLD';
   armored?: boolean;
   hasWarranty?: boolean;
@@ -87,7 +88,6 @@ export const vehicleService = {
         `/workspaces/${workspaceId}/vehicles`,
         {
           params: buildQueryParams(params),
-          timeout: 5000,
         },
       );
     } catch (error) {
@@ -128,11 +128,20 @@ export const vehicleService = {
     }
   },
 
+  async listVehicleMakes(workspaceId: string): Promise<string[]> {
+    try {
+      const data = await httpClient.get<{ makes: string[] }>(
+        `/workspaces/${workspaceId}/vehicles/makes`,
+      );
+      return data.makes;
+    } catch (error) {
+      if (!env.enableMockFallback) throw error;
+      return Array.from(new Set(FALLBACK_VEHICLES.map((v) => v.make)));
+    }
+  },
   async getVehicleById(workspaceId: string, id: string): Promise<Vehicle | null> {
     try {
-      return await httpClient.get<Vehicle>(`/workspaces/${workspaceId}/vehicles/${id}`, {
-        timeout: 5000,
-      });
+      return await httpClient.get<Vehicle>(`/workspaces/${workspaceId}/vehicles/${id}`);
     } catch (error) {
       if (!env.enableMockFallback) throw error;
       return FALLBACK_VEHICLES.find((v) => v.id === id) || null;

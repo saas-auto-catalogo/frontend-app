@@ -1,6 +1,6 @@
 import { Badge } from '../ui/Badge.js';
 import { Button } from '../ui/Button.js';
-import { Eye, Smartphone } from 'lucide-react';
+import { Car, Eye, Smartphone } from 'lucide-react';
 import { VehicleAdData } from './MetaAdSimulator.js';
 
 export interface InventoryTableProps {
@@ -45,12 +45,22 @@ export function InventoryTable({
                 {/* Miniatura + Modelo */}
                 <td className="py-3.5 px-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-9 rounded-md bg-surface-muted border border-surface-border overflow-hidden shrink-0">
-                      <img
-                        src={vehicle.heroImageUrl}
-                        alt={vehicle.model}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="w-12 h-9 rounded-md bg-surface-muted border border-surface-border overflow-hidden shrink-0 relative">
+                      {vehicle.heroImageUrl || vehicle.imageUrl ? (
+                        <img
+                          src={vehicle.heroImageUrl || vehicle.imageUrl}
+                          alt={vehicle.model}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      {vehicle.heroImageUrl || vehicle.imageUrl ? null : (
+                        <div className="w-full h-full bg-surface-muted text-typography-subtle flex items-center justify-center">
+                          <Car className="w-4 h-4" />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <p className="font-bold text-typography-heading">{vehicle.make} {vehicle.model}</p>
