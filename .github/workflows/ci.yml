@@ -24,6 +24,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           fingerprint: SHA256:Y2xt7oRzNaWivQcaxk3a9G4YuUWE0aEsuGhjcYeqR8k
+          timeout: 2m
           command_timeout: 20m
           script: |
             set -euo pipefail
@@ -35,3 +36,4 @@ jobs:
           code=$(curl -fsSI -o /dev/null -w '%{http_code}' https://app.drivesync.me/)
           echo "http_code=$code"
           test "$code" = "200"
+
