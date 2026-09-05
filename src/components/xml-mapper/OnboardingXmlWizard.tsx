@@ -12,16 +12,21 @@ import {
   Copy,
   ShieldCheck,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { DMS_PRESETS, DmsPreset } from './DmsPresetSelector.js';
 import { useWorkspace } from '../../hooks/useWorkspace.js';
-import { feedService } from '../../services/api/feedService.js';
+import { feedService, FeedConfigSummary } from '../../services/api/feedService.js';
+import { dashboardService } from '../../services/api/dashboardService.js';
+import { env } from '../../config/env.js';
 import { ApiError } from '../../types/api.js';
 import {
   type FeedDetectedFormat,
   getFeedValidationSuccessMessage,
   getPresetIdsForFormat,
+  presetIdToSourceType,
   resolvePresetIdFromSuggestion,
+  resolveSourceTypeForFeed,
 } from '../../utils/feedPresets.js';
 
 export interface OnboardingXmlWizardProps {
@@ -39,9 +44,14 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [vehicleCount, setVehicleCount] = useState<number | null>(null);
   const [detectedFormat, setDetectedFormat] = useState<FeedDetectedFormat | null>(null);
+  const [suggestedSourceType, setSuggestedSourceType] = useState<string | null>(null);
+  const [isActivating, setIsActivating] = useState<boolean>(false);
+  const [activationError, setActivationError] = useState<string | null>(null);
+  const [activationProgress, setActivationProgress] = useState<number>(0);
+  const [activationStatus, setActivationStatus] = useState<string | null>(null);
+  const [realFeedUrl, setRealFeedUrl] = useState<string | null>(null);
+  const [syncedVehicleCount, setSyncedVehicleCount] = useState<number | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
-
-  const generatedFeedUrl = 'https://api.drivesync.me/api/v1/feeds/sec_tok_98f12ae8b10/meta-vehicles.xml';
 
   const visiblePresets = DMS_PRESETS.filter((preset) =>
     getPresetIdsForFormat(detectedFormat).includes(preset.id),
@@ -53,6 +63,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
     setValidationMessage(null);
     setVehicleCount(null);
     setDetectedFormat(null);
+    setSuggestedSourceType(null);
   };
 
   const handleTestUrl = async () => {
@@ -85,12 +96,19 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
         setValidationMessage(null);
 
         const suggestedPresetId = resolvePresetIdFromSuggestion(result.suggestedPresetId);
-        if (suggestedPresetId) {
-          const suggested = DMS_PRESETS.find((preset) => preset.id === suggestedPresetId);
+        const effectivePresetId =
+          suggestedPresetId && DMS_PRESETS.some((preset) => preset.id === suggestedPresetId)
+            ? suggestedPresetId
+            : selectedPreset.id;
+
+        if (effectivePresetId !== selectedPreset.id) {
+          const suggested = DMS_PRESETS.find((preset) => preset.id === effectivePresetId);
           if (suggested) {
             setSelectedPreset(suggested);
           }
         }
+
+        setSuggestedSourceType(resolveSourceTypeForFeed(effectivePresetId, result.suggestedPresetId));
       } else {
         setUrlStatus('INVALID');
         setValidationMessage(
@@ -109,8 +127,100 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
     }
   };
 
+  const resolvePublicFeedUrl = async (feed: FeedConfigSummary) => {
+    let url: string | null = null;
+    let catalogCount: number | null = null;
+
+    if (workspaceId) {
+      try {
+        const catalogs = await dashboardService.listMetaCatalogs(workspaceId);
+        const catalog = catalogs[0] ?? null;
+        url = catalog?.publicFeedUrl ?? null;
+        catalogCount = catalog?.totalVehiclesCount ?? null;
+      } catch {
+        url = null;
+      }
+    }
+
+    if (!url && feed.activeTokenHash) {
+      const apiOrigin = env.apiUrl.replace(/\/api\/v1\/?$/, '');
+      url = `${apiOrigin}/api/v1/feeds/${feed.activeTokenHash}/meta-vehicles.xml`;
+    }
+
+    return { url, vehicleCount: catalogCount };
+  };
+
+  const handleSaveAndActivate = async () => {
+    if (!workspaceId) return;
+
+    setIsActivating(true);
+    setActivationError(null);
+    setActivationProgress(0);
+    setActivationStatus('Salvando a configuração do feed...');
+
+    try {
+      const sourceType = suggestedSourceType ?? presetIdToSourceType(selectedPreset.id);
+      const existingFeeds = await feedService.listFeeds(workspaceId);
+      const activeFeed = existingFeeds.find((feed) => feed.isActive) ?? existingFeeds[0] ?? null;
+
+      const feed = activeFeed
+        ? await feedService.updateFeed(workspaceId, activeFeed.id, {
+            feedUrl: xmlUrl.trim(),
+            sourceType,
+            isActive: true,
+          })
+        : await feedService.createFeed(workspaceId, {
+            sourceType,
+            feedUrl: xmlUrl.trim(),
+          });
+
+      setActivationProgress(20);
+      setActivationStatus('Disparando a sincronização do estoque...');
+
+      const syncJob = await feedService.triggerSync(workspaceId, feed.id);
+
+      setActivationProgress(35);
+      setActivationStatus('Sincronizando veículos do feed DMS...');
+
+      const job = await feedService.waitForSyncJob(workspaceId, feed.id, syncJob.jobId, {
+        onProgress: (status) => {
+          const progress = typeof status.progress === 'number' ? status.progress : 0;
+          setActivationProgress(Math.min(90, 35 + Math.round((progress / 100) * 55)));
+        },
+      });
+
+      if (job.status === 'failed') {
+        throw new Error(job.failedReason ?? 'A sincronização do feed falhou.');
+      }
+
+      setActivationProgress(92);
+      setActivationStatus('Validando a URL pública do catálogo Meta...');
+
+      const publicInfo = await resolvePublicFeedUrl(feed);
+      const processedVehicles =
+        typeof job.result?.totalIngested === 'number' && job.result.totalIngested > 0
+          ? job.result.totalIngested
+          : publicInfo.vehicleCount;
+
+      setRealFeedUrl(publicInfo.url);
+      setSyncedVehicleCount(processedVehicles);
+      setActivationProgress(100);
+      setActivationStatus('Feed ativado com sucesso!');
+      setCurrentStep(3);
+    } catch (error) {
+      setActivationError(
+        error instanceof Error
+          ? error.message
+          : 'Falha ao salvar e ativar o feed. Tente novamente.',
+      );
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
   const handleCopyFeedUrl = () => {
-    navigator.clipboard.writeText(generatedFeedUrl);
+    if (!realFeedUrl) return;
+    navigator.clipboard.writeText(realFeedUrl);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -356,18 +466,29 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
               </p>
             </div>
 
+            {/* Resultado da Sincronização */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Badge variant="available" size="md" dot>
+                {syncedVehicleCount !== null ? `${syncedVehicleCount} veículos sincronizados` : 'Sincronização concluída'}
+              </Badge>
+              <Badge variant="primary" size="md" dot>
+                Atualização automática a cada 15 minutos
+              </Badge>
+            </div>
+
             {/* Box da URL Pública */}
             <div className="p-4 bg-surface-muted/70 rounded-xl border border-surface-border space-y-2">
               <label className="block text-[11px] font-bold uppercase tracking-wider text-typography-muted">
-                URL Pública do Feed Atom XML (Protegida por HMAC)
+                URL Pública do Feed Meta (Protegida por HMAC)
               </label>
               <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-surface-border">
                 <code className="text-xs font-mono text-brand-primary flex-1 truncate select-all">
-                  {generatedFeedUrl}
+                  {realFeedUrl ?? 'Gerando URL pública do feed...'}
                 </code>
                 <Button
                   variant={isCopied ? 'primary' : 'outline'}
                   size="sm"
+                  disabled={!realFeedUrl}
                   icon={isCopied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   onClick={handleCopyFeedUrl}
                 >
@@ -391,6 +512,29 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
           </div>
         )}
 
+        {/* Progresso de Ativação */}
+        {currentStep === 2 && isActivating && (
+          <div className="px-6 py-4 bg-blue-50/50 border-t border-blue-100 space-y-2">
+            <div className="flex items-center gap-2 text-xs text-blue-800">
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              <span>{activationStatus ?? 'Ativando o feed...'}</span>
+            </div>
+            <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-blue-100">
+              <div
+                className="h-full bg-brand-primary rounded-full transition-all duration-500"
+                style={{ width: `${activationProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {currentStep === 2 && activationError && (
+          <div className="px-6 py-3 bg-red-50/80 border-t border-red-200 flex items-center gap-2 text-xs text-red-800">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{activationError} Tente novamente.</span>
+          </div>
+        )}
+
         {/* Rodapé com Botões de Navegação */}
         <div className="px-6 py-4 bg-surface-muted/30 border-t border-surface-border flex items-center justify-between">
           <div>
@@ -398,6 +542,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
               <Button
                 variant="outline"
                 size="md"
+                disabled={isActivating}
                 icon={<ArrowLeft className="w-4 h-4" />}
                 onClick={() => setCurrentStep((prev) => prev - 1)}
               >
@@ -411,13 +556,24 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
           </div>
 
           <div className="flex items-center gap-2">
-            {currentStep < 3 ? (
+            {currentStep === 2 ? (
+              <Button
+                variant="primary"
+                size="md"
+                loading={isActivating}
+                disabled={!urlStatus || urlStatus !== 'VALID' || isActivating}
+                icon={isActivating ? undefined : <ArrowRight className="w-4 h-4" />}
+                onClick={handleSaveAndActivate}
+              >
+                {isActivating ? 'Salvando e Ativando...' : 'Continuar para Ativação'}
+              </Button>
+            ) : currentStep === 1 ? (
               <Button
                 variant="primary"
                 size="md"
                 icon={<ArrowRight className="w-4 h-4" />}
                 onClick={() => setCurrentStep((prev) => prev + 1)}
-                disabled={currentStep === 1 && urlStatus !== 'VALID'}
+                disabled={urlStatus !== 'VALID'}
               >
                 Continuar
               </Button>
@@ -426,7 +582,9 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
                 variant="primary"
                 size="md"
                 icon={<CheckCircle2 className="w-4 h-4" />}
-                onClick={() => onComplete && onComplete(generatedFeedUrl)}
+                onClick={() => {
+                  if (realFeedUrl && onComplete) onComplete(realFeedUrl);
+                }}
               >
                 Concluir Onboarding
               </Button>

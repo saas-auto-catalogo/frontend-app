@@ -181,6 +181,13 @@ export function DashboardApp() {
     });
   }, [location.state, loadDashboard, navigate]);
 
+  const handleFeedConfigured = useCallback(() => {
+    setLoading(true);
+    void loadDashboard(true).then(() => {
+      setInventoryRefreshKey((prev) => prev + 1);
+    });
+  }, [loadDashboard]);
+
   const handleTriggerSync = async () => {
     if (!workspaceId) return;
 
@@ -404,7 +411,7 @@ export function DashboardApp() {
 
           {activeTab === 'xml-mapper' && (
             <div className="space-y-6">
-              <XmlMapperStudio />
+              <XmlMapperStudio onFeedConfigured={handleFeedConfigured} />
             </div>
           )}
 

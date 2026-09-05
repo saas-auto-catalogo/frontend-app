@@ -24,6 +24,10 @@ export interface FieldMappingRule {
   confidence: number;
 }
 
+export interface XmlMapperStudioProps {
+  onFeedConfigured?: () => void;
+}
+
 const INITIAL_MAPPINGS: Record<string, FieldMappingRule[]> = {
   autocerto: [
     { id: '1', metaField: 'g:vehicle_id', metaLabel: 'ID Único do Veículo', sourceTag: 'codigo_veiculo', isRequired: true, transformType: 'DIRECT', confidence: 99.9 },
@@ -50,7 +54,7 @@ const INITIAL_MAPPINGS: Record<string, FieldMappingRule[]> = {
   ]
 };
 
-export function XmlMapperStudio() {
+export function XmlMapperStudio({ onFeedConfigured }: XmlMapperStudioProps) {
   const [isWizardMode, setIsWizardMode] = useState<boolean>(false);
   const [selectedPreset, setSelectedPreset] = useState<DmsPreset>(DMS_PRESETS[0]);
   const [mappings, setMappings] = useState<FieldMappingRule[]>(INITIAL_MAPPINGS['autocerto']);
@@ -124,8 +128,8 @@ export function XmlMapperStudio() {
           </Button>
         </div>
         <OnboardingXmlWizard
-          onComplete={(url) => {
-            alert(`🎉 Onboarding finalizado! Feed ativo em: ${url}`);
+          onComplete={() => {
+            onFeedConfigured?.();
             setIsWizardMode(false);
           }}
           onCancel={() => setIsWizardMode(false)}

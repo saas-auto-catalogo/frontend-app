@@ -6,6 +6,7 @@ export interface FeedConfigSummary {
   sourceType: string;
   feedUrl: string;
   isActive: boolean;
+  activeTokenHash?: string;
   lastSyncAt: string | null;
   lastSyncStatus: SyncStatus | null;
   lastSyncMessage: string | null;
@@ -25,6 +26,12 @@ export interface CreateFeedPayload {
   feedUrl: string;
 }
 
+export interface UpdateFeedPayload {
+  feedUrl?: string;
+  sourceType?: string;
+  isActive?: boolean;
+}
+
 export interface SyncTriggerResponse {
   jobId: string;
   status: string;
@@ -40,6 +47,7 @@ export interface SyncJobStatusResponse {
   failedReason?: string;
   result?: {
     vehiclesProcessed?: number;
+    totalIngested?: number;
     status?: string;
   };
 }
@@ -85,6 +93,18 @@ export const feedService = {
   async createFeed(workspaceId: string, payload: CreateFeedPayload): Promise<FeedConfigSummary> {
     const response = await httpClient.post<CreateFeedResponse>(
       `/workspaces/${workspaceId}/feeds`,
+      payload,
+    );
+    return response.feed;
+  },
+
+  async updateFeed(
+    workspaceId: string,
+    feedId: string,
+    payload: UpdateFeedPayload,
+  ): Promise<FeedConfigSummary> {
+    const response = await httpClient.put<CreateFeedResponse>(
+      `/workspaces/${workspaceId}/feeds/${feedId}`,
       payload,
     );
     return response.feed;
