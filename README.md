@@ -1,4 +1,4 @@
-# SaaS Auto Catálogo — Frontend App
+# DriveSync — Frontend App
 
 [![CI](https://github.com/saas-auto-catalogo/frontend-app/actions/workflows/ci.yml/badge.svg)](https://github.com/saas-auto-catalogo/frontend-app/actions/workflows/ci.yml)
 

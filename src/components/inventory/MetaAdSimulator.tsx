@@ -289,7 +289,7 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
               {/* Box de Destino do Link */}
               <div className="p-3 bg-surface-muted/60 border-t border-surface-border flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-typography-subtle font-mono truncate">autocatalogo.com.br</p>
+                  <p className="text-[10px] uppercase tracking-wider text-typography-subtle font-mono truncate">drivesync.me</p>
                   <p className="font-bold text-typography-heading truncate">{vehicle.make} {vehicle.model} • {vehicle.version}</p>
                   <p className="font-bold text-brand-price mt-0.5">
                     {vehicle.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}

@@ -13,7 +13,7 @@ export const LEGAL_ACCEPTANCE_DOCUMENTS: LegalAcceptanceDocument[] = [
   {
     slug: 'termos-de-uso',
     version: '2026-09-02',
-    contentHash: 'sha256:79ce8991aed8438985c8ca198ad3c885092ced7ca0f61ac97fa3792b49bcad9c',
+    contentHash: 'sha256:5af171e0a51e9ed7e078d80b5a68c9c3cd57d1d65965d6916dda5643ba4ebb1c',
     prefix: 'Li e aceito os ',
     anchor: 'Termos de Uso',
     suffix: '.',
@@ -21,7 +21,7 @@ export const LEGAL_ACCEPTANCE_DOCUMENTS: LegalAcceptanceDocument[] = [
   {
     slug: 'politica-de-privacidade',
     version: '2026-09-02',
-    contentHash: 'sha256:5f451b0c2dd2006274ef84fbd73c7ba1c917db459e9796c6591685fd7f09214a',
+    contentHash: 'sha256:21e1247beb7ab7032a14c21632b39e8b6e2ae9e687d749fa4f4a02b62ffce31c',
     prefix: 'Li e aceito a ',
     anchor: 'Política de Privacidade',
     suffix: '.',
@@ -31,7 +31,7 @@ export const LEGAL_ACCEPTANCE_DOCUMENTS: LegalAcceptanceDocument[] = [
 export const SUBSCRIBE_LEGAL_DOCUMENT: LegalAcceptanceDocument = {
   slug: 'contrato-saas',
   version: '2026-09-02',
-  contentHash: 'sha256:4eb7821b4807f014475bcb0ddf1994a1bedccccc27cccdaf22b5ad1cb8c7a57c',
+  contentHash: 'sha256:bbacb45dcc3d4a083065b03c54410dd10a2870da08f334c082a4a6c3393a65d9',
   prefix: 'Li e aceito o ',
   anchor: 'Contrato SaaS',
   suffix: '.',

@@ -13,5 +13,5 @@ export const env: AppConfig = {
   enableMockFallback: import.meta.env.VITE_ENABLE_MOCK_FALLBACK === 'true',
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,
-  marketingUrl: import.meta.env.VITE_MARKETING_URL || 'https://autocatalogo.com.br',
+  marketingUrl: import.meta.env.VITE_MARKETING_URL || 'https://drivesync.me',
 };

@@ -41,7 +41,7 @@ export function OnboardingXmlWizard({ onComplete, onCancel }: OnboardingXmlWizar
   const [detectedFormat, setDetectedFormat] = useState<FeedDetectedFormat | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
 
-  const generatedFeedUrl = 'https://api.autocatalogo.com.br/api/v1/feeds/sec_tok_98f12ae8b10/meta-vehicles.xml';
+  const generatedFeedUrl = 'https://api.drivesync.me/api/v1/feeds/sec_tok_98f12ae8b10/meta-vehicles.xml';
 
   const visiblePresets = DMS_PRESETS.filter((preset) =>
     getPresetIdsForFormat(detectedFormat).includes(preset.id),
