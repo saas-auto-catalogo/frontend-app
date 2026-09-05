@@ -147,7 +147,7 @@ export function XmlMapperStudio() {
           </div>
           <h3 className="text-base font-bold">Wizard de Conexão do Feed</h3>
           <p className="text-xs text-blue-100 max-w-xl">
-            Insira o link do seu estoque (XML ou JSON) e deixe a inteligência do Auto Catálogo mapear automaticamente os campos para o Meta Automotive Ads.
+            Insira o link do seu estoque (XML ou JSON) e deixe a inteligência do DriveSync mapear automaticamente os campos para o Meta Automotive Ads.
           </p>
         </div>
 

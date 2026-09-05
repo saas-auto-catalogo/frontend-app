@@ -27,7 +27,7 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
               <Car className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm font-semibold tracking-wide uppercase text-blue-100">SaaS Auto Catálogo</p>
+              <p className="text-sm font-semibold tracking-wide uppercase text-blue-100">DriveSync</p>
               <p className="text-lg font-bold">Auto Clean Pro</p>
             </div>
           </div>
@@ -66,7 +66,7 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
               <Car className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-typography-muted">Auto Catálogo</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-typography-muted">DriveSync</p>
               <p className="text-sm font-bold text-typography-heading">Auto Clean Pro</p>
             </div>
           </div>

@@ -127,7 +127,7 @@ export function Sidebar({
         </div>
         <div>
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-base text-white tracking-tight">Auto Catálogo</span>
+            <span className="font-bold text-base text-white tracking-tight">DriveSync</span>
           </div>
           <p className="text-[10px] text-blue-200 font-mono">SaaS Enterprise v1.0</p>
         </div>
