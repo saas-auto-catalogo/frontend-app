@@ -31,7 +31,7 @@ export const LEGAL_ACCEPTANCE_DOCUMENTS: LegalAcceptanceDocument[] = [
 export const SUBSCRIBE_LEGAL_DOCUMENT: LegalAcceptanceDocument = {
   slug: 'contrato-saas',
   version: '2026-09-02',
-  contentHash: 'sha256:bbacb45dcc3d4a083065b03c54410dd10a2870da08f334c082a4a6c3393a65d9',
+  contentHash: 'sha256:0325683234279b550642a3fb954f21cb4baf69dde014e102659890a25f52bb91',
   prefix: 'Li e aceito o ',
   anchor: 'Contrato SaaS',
   suffix: '.',
