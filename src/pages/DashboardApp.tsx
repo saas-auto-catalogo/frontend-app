@@ -295,7 +295,7 @@ export function DashboardApp() {
                     />
 
                     <MetricCard
-                      title="Elegíveis no Meta DAA"
+                      title="Elegíveis para Anúncios Meta"
                       value={`${stats.eligibleForMetaAds} veículos`}
                       subtitle="Fotos e preços válidos"
                       icon={<CheckCircle2 className="w-5 h-5" />}

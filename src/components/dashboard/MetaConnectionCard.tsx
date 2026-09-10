@@ -56,6 +56,10 @@ export function MetaConnectionCard({
 
   const isSyncing = externalIsSyncing !== undefined ? externalIsSyncing : internalIsSyncing;
   const canSync = Boolean(activeFeedId);
+  const isLocalDev =
+    import.meta.env.DEV &&
+    typeof window !== 'undefined' &&
+    window.location.hostname === 'localhost';
 
   const loadCatalogData = async () => {
     try {
@@ -198,7 +202,7 @@ export function MetaConnectionCard({
               </Badge>
             </div>
             <p className="text-xs text-typography-muted">
-              Sincronização programada direta com a Meta Graph API v21.0
+              Sincronização automática com a Meta (Facebook e Instagram)
             </p>
             {catalog?.metaCatalogId ? (
               <p className="text-xs text-brand-primary font-medium mt-0.5">
@@ -296,9 +300,9 @@ export function MetaConnectionCard({
                   Conecte ao Meta Catalog no Facebook
                 </p>
                 <p className="text-xs text-typography-muted mt-1">
-                  Seu <strong>Feed XML Atom DAA</strong> já está ativo e pode ser cadastrado
-                  manualmente no Meta Commerce Manager. Conectar sua conta via Facebook é
-                  opcional e habilita a sincronização direta com a Graph API v21.0.
+                  Seu catálogo de veículos (Feed XML) já está ativo e pronto para uso no Meta
+                  Commerce Manager. Conectar sua conta pelo Facebook permite a sincronização
+                  direta e automática dos anúncios.
                 </p>
               </div>
             </div>
@@ -324,7 +328,7 @@ export function MetaConnectionCard({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3">
               <div className="flex items-center gap-2 text-xs text-typography-muted">
                 <Facebook className="w-3.5 h-3.5 text-brand-primary" />
-                <span>Conectado via Facebook (Graph API v21.0)</span>
+                <span>Conectado ao Facebook &amp; Instagram</span>
               </div>
               <div className="flex items-center gap-3">
                 {oauthError ? (
@@ -348,10 +352,10 @@ export function MetaConnectionCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-mono text-blue-300 font-semibold uppercase">
-                Feed XML Atom DAA
+                Feed do Catálogo (XML)
               </span>
               <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
-                Cache Redis 15m
+                Atualizado a cada 15 min
               </span>
             </div>
             <p className="text-xs font-mono text-slate-300 truncate mt-0.5">
@@ -406,11 +410,13 @@ export function MetaConnectionCard({
               <li>Acesse o <strong>Meta Commerce Manager</strong> no catálogo <strong>{catalog.catalogName || 'Auto'}</strong>.</li>
               <li>No menu lateral esquerdo, clique em <strong>Fontes de Dados (Data Sources)</strong>.</li>
               <li>Clique em <strong>Adicionar Veículos &gt; Feed de Dados (Data Feed) &gt; Feed Programado</strong>.</li>
-              <li>Cole a <strong>URL do Feed XML Atom DAA</strong> copiada acima e confirme.</li>
+              <li>Cole a <strong>URL do Feed do Catálogo</strong> copiada acima e confirme.</li>
             </ol>
-            <p className="text-[11px] text-typography-subtle">
-              💡 <em>Nota de Ambiente Local:</em> Se estiver testando em <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">localhost</code>, os servidores da Meta não conseguem acessar sua máquina diretamente. Para a Meta puxar o XML em desenvolvimento, utilize um túnel público (como <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">ngrok http 3333</code>) ou teste com a URL do ambiente de produção.
-            </p>
+            {isLocalDev ? (
+              <p className="text-[11px] text-typography-subtle">
+                💡 <em>Nota de Ambiente Local:</em> Se estiver testando em <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">localhost</code>, os servidores da Meta não conseguem acessar sua máquina diretamente. Para a Meta puxar o XML em desenvolvimento, utilize um túnel público (como <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">ngrok http 3333</code>) ou teste com a URL do ambiente de produção.
+              </p>
+            ) : null}
           </div>
         ) : null}
       </CardContent>
