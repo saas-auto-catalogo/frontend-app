@@ -93,7 +93,7 @@ export function Header({
             size="sm"
             icon={<ExternalLink className="w-3.5 h-3.5" />}
             onClick={handleOpenFeed}
-            title="Abrir feed XML Meta Atom DAA do catálogo"
+            title="Abrir feed XML do catálogo para anúncios"
           >
             Feed XML Meta
           </Button>
