@@ -12,7 +12,7 @@ import { ApiError } from '../types/api.js';
 import type { BillingInterval, PlanTier } from '../types/billing.js';
 import { PLAN_OPTIONS, parsePlanTier } from '../types/billing.js';
 import { getPostAuthPath } from '../utils/auth.js';
-import { isActiveSubscription } from '../utils/subscription.js';
+import { isPaidSubscription, isTrialing } from '../utils/subscription.js';
 import {
   SUBSCRIBE_LEGAL_DOCUMENT,
   SUBSCRIBE_LEGAL_REQUIRED_ERROR,
@@ -36,8 +36,10 @@ export function SubscribePage() {
   const [acceptContract, setAcceptContract] = useState(false);
   const [legalError, setLegalError] = useState<string | null>(null);
   const [isResettingRegistration, setIsResettingRegistration] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const isExpiredTrial = billing?.status === 'EXPIRED';
+  const isTrialingStatus = isTrialing(billing?.status ?? 'NONE');
 
   useEffect(() => {
     if (isExpiredTrial) {
@@ -53,7 +55,7 @@ export function SubscribePage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (user && billing && isActiveSubscription(billing.status)) {
+    if (user && billing && isPaidSubscription(billing.status)) {
       navigate(getPostAuthPath(user, billing), { replace: true });
     }
   }, [user, billing, navigate]);
@@ -65,6 +67,7 @@ export function SubscribePage() {
     }
 
     setFormError(null);
+    setStatusMessage(null);
 
     if (!acceptContract) {
       setLegalError(SUBSCRIBE_LEGAL_REQUIRED_ERROR);
@@ -111,8 +114,14 @@ export function SubscribePage() {
 
   const handleRefresh = async () => {
     const latest = await refetchBilling();
-    if (user && latest && isActiveSubscription(latest.status)) {
-      navigate(getPostAuthPath(user, latest), { replace: true });
+    if (user && latest) {
+      if (isPaidSubscription(latest.status)) {
+        navigate(getPostAuthPath(user, latest), { replace: true });
+        return;
+      }
+      setStatusMessage(
+        'Aguardando confirmação do pagamento. Se você já concluiu o checkout no Stripe, o acesso será liberado em instantes.',
+      );
     }
   };
 
@@ -139,11 +148,19 @@ export function SubscribePage() {
 
   return (
     <AuthLayout
-      title={isExpiredTrial ? 'Seu teste grátis terminou' : 'Contrate um plano para continuar'}
+      title={
+        isExpiredTrial
+          ? 'Seu teste grátis terminou'
+          : isTrialingStatus
+            ? 'Efetive sua assinatura'
+            : 'Contrate um plano para continuar'
+      }
       subtitle={
         isExpiredTrial
           ? 'Contrate um plano para continuar usando o catálogo.'
-          : 'Escolha o plano ideal e conclua o pagamento para liberar o onboarding.'
+          : isTrialingStatus
+            ? 'Você está no período de teste grátis. Efetive sua assinatura agora para evitar interrupções.'
+            : 'Escolha o plano ideal e conclua o pagamento para liberar o onboarding.'
       }
     >
       <div className="space-y-6">
@@ -153,12 +170,18 @@ export function SubscribePage() {
           </div>
           <div className="space-y-1">
             <p className="text-sm font-semibold text-typography-heading">
-              {isExpiredTrial ? 'Período de teste encerrado' : 'Assinatura necessária'}
+              {isExpiredTrial
+                ? 'Período de teste encerrado'
+                : isTrialingStatus
+                  ? 'Período de teste em andamento'
+                  : 'Assinatura necessária'}
             </p>
             <p className="text-sm text-typography-muted">
               {isExpiredTrial
                 ? 'Seu acesso ao teste grátis expirou. Escolha um plano e conclua o pagamento no Stripe para retomar o uso.'
-                : 'Seu workspace ainda não possui um plano ativo. Após o pagamento no Stripe, você será redirecionado automaticamente.'}
+                : isTrialingStatus
+                  ? 'Você pode efetivar sua assinatura agora para evitar interrupções ao fim do período de testes.'
+                  : 'Seu workspace ainda não possui um plano ativo. Após o pagamento no Stripe, você será redirecionado automaticamente.'}
             </p>
           </div>
         </div>
@@ -166,6 +189,12 @@ export function SubscribePage() {
         {formError ? (
           <div className="rounded-md border border-brand-price/30 bg-brand-priceLight px-3.5 py-2.5 text-sm text-brand-price">
             {formError}
+          </div>
+        ) : null}
+
+        {statusMessage ? (
+          <div className="rounded-md border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-sm text-brand-primary">
+            {statusMessage}
           </div>
         ) : null}
 
@@ -266,6 +295,16 @@ export function SubscribePage() {
           >
             Contratar plano
           </Button>
+
+          {isTrialingStatus ? (
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => navigate('/', { replace: true })}
+            >
+              Voltar ao painel
+            </Button>
+          ) : null}
 
           <Button variant="outline" size="md" onClick={() => void handleRefresh()}>
             Já paguei — verificar assinatura

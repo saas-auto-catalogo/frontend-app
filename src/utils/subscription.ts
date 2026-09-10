@@ -4,6 +4,10 @@ export function isActiveSubscription(status: SubscriptionStatus): boolean {
   return status === 'ACTIVE' || status === 'TRIALING';
 }
 
+export function isPaidSubscription(status: SubscriptionStatus): boolean {
+  return status === 'ACTIVE';
+}
+
 export function isTrialing(status: SubscriptionStatus): boolean {
   return status === 'TRIALING';
 }

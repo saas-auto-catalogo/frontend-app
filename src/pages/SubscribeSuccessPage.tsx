@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button.js';
 import { useAuth } from '../context/AuthContext.js';
 import { useSubscription } from '../context/SubscriptionContext.js';
 import { getPostAuthPath } from '../utils/auth.js';
-import { isActiveSubscription } from '../utils/subscription.js';
+import { isPaidSubscription } from '../utils/subscription.js';
 
 const POLL_INTERVAL_MS = 2500;
 const MAX_POLL_ATTEMPTS = 12;
@@ -20,7 +20,7 @@ export function SubscribeSuccessPage() {
 
   const checkBilling = useCallback(async (): Promise<boolean> => {
     const latest = await refetchBilling();
-    if (user && latest && isActiveSubscription(latest.status)) {
+    if (user && latest && isPaidSubscription(latest.status)) {
       navigate(getPostAuthPath(user, latest), { replace: true });
       return true;
     }
