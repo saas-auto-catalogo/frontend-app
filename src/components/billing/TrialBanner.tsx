@@ -32,7 +32,11 @@ export function TrialBanner() {
           </p>
         </div>
         <Link
-          to="/subscribe?plan=PRO"
+          to={
+            billing.planTier
+              ? `/subscribe?plan=${billing.planTier}`
+              : '/subscribe?plan=PRO'
+          }
           className="inline-flex items-center justify-center rounded-md bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800 transition-colors shrink-0"
         >
           Contratar plano
