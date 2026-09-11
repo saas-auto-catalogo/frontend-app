@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 :root {
   /* Cores Base Light Mode */
   --bg-canvas: #F8FAFC;

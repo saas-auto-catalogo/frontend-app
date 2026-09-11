@@ -38,17 +38,17 @@ function createSuperAdminBilling(workspaceId: string): WorkspaceBilling {
 }
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { workspaceId } = useWorkspace();
   const [billing, setBillingState] = useState<WorkspaceBilling | null>(null);
   const [isLoadingState, setIsLoadingState] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Enquanto houver um usuário autenticado e o primeiro carregamento de billing ainda não
-  // tiver sido resolvido, mantém isLoading=true para que os guards de assinatura aguardem em
-  // vez de redirecionar precocemente (ex.: retorno do OAuth Meta com full page reload).
-  const isLoading = isAuthenticated && !hasInitialized ? true : isLoadingState;
+  // Enquanto a autenticação valida o refresh token (bootstrap) ou o primeiro carregamento de
+  // billing ainda não foi resolvido, mantém isLoading=true para que os guards de assinatura
+  // aguardem em vez de redirecionar precocemente (ex.: retorno do OAuth Meta ou reload com F5).
+  const isLoading = isAuthLoading || (isAuthenticated && !hasInitialized) || isLoadingState;
 
   const setBilling = useCallback((nextBilling: WorkspaceBilling | null) => {
     setBillingState(nextBilling);
@@ -59,7 +59,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !user) {
       setBilling(null);
       setError(null);
-      setHasInitialized(true);
+      setHasInitialized(false);
       setIsLoadingState(false);
       return null;
     }
@@ -67,7 +67,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     if (!workspaceId) {
       setBilling(null);
       setError(null);
-      setHasInitialized(true);
       setIsLoadingState(false);
       return null;
     }
@@ -103,11 +102,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [refetchBilling]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!isAuthenticated) {
+      setBilling(null);
+      setError(null);
       setHasInitialized(false);
       setIsLoadingState(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, setBilling]);
 
   const value = useMemo<SubscriptionContextValue>(
     () => ({
