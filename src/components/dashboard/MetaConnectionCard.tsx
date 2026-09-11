@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Card, CardHeader, CardContent } from '../ui/Card.js';
 import { Badge } from '../ui/Badge.js';
 import { Button } from '../ui/Button.js';
-import { CheckCircle2, RefreshCw, Copy, Check, AlertTriangle, Rss, ExternalLink, Facebook, Store } from 'lucide-react';
+import { CheckCircle2, RefreshCw, Copy, Check, AlertTriangle, Rss, ExternalLink, Facebook } from 'lucide-react';
 import { type CatalogStatus, type MetaCatalogSummary } from '../../services/api/dashboardService.js';
 import { metaService } from '../../services/api/metaService.js';
 import { metaIntegrationService } from '../../services/api/metaIntegrationService.js';
@@ -56,10 +56,6 @@ export function MetaConnectionCard({
 
   const isSyncing = externalIsSyncing !== undefined ? externalIsSyncing : internalIsSyncing;
   const canSync = Boolean(activeFeedId);
-  const isLocalDev =
-    import.meta.env.DEV &&
-    typeof window !== 'undefined' &&
-    window.location.hostname === 'localhost';
 
   const loadCatalogData = async () => {
     try {
@@ -386,39 +382,6 @@ export function MetaConnectionCard({
             </button>
           </div>
         </div>
-
-        {catalog?.metaCatalogId ? (
-          <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-4 space-y-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <span className="text-xs font-bold text-typography-heading flex items-center gap-1.5">
-                <Store className="w-4 h-4 text-brand-primary" />
-                Como os veículos são carregados na Meta (Passo Obrigatório)
-              </span>
-              <a
-                href="https://business.facebook.com/commerce_manager"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-brand-primary font-semibold hover:underline flex items-center gap-1"
-              >
-                Abrir Commerce Manager <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-            <p className="text-xs text-typography-muted leading-relaxed">
-              O catálogo <strong className="text-typography-heading">"{catalog.catalogName || 'Auto'}"</strong> (ID: {catalog.metaCatalogId}) foi criado na Meta. Para que a Meta faça a primeira importação e mantenha os <strong className="text-typography-heading">{eligible} veículos</strong> atualizados automaticamente:
-            </p>
-            <ol className="text-xs text-typography-muted list-decimal list-inside space-y-1 pl-1 bg-white/70 rounded-md p-2.5 border border-blue-100">
-              <li>Acesse o <strong>Meta Commerce Manager</strong> no catálogo <strong>{catalog.catalogName || 'Auto'}</strong>.</li>
-              <li>No menu lateral esquerdo, clique em <strong>Fontes de Dados (Data Sources)</strong>.</li>
-              <li>Clique em <strong>Adicionar Veículos &gt; Feed de Dados (Data Feed) &gt; Feed Programado</strong>.</li>
-              <li>Cole a <strong>URL do Feed do Catálogo</strong> copiada acima e confirme.</li>
-            </ol>
-            {isLocalDev ? (
-              <p className="text-[11px] text-typography-subtle">
-                💡 <em>Nota de Ambiente Local:</em> Se estiver testando em <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">localhost</code>, os servidores da Meta não conseguem acessar sua máquina diretamente. Para a Meta puxar o XML em desenvolvimento, utilize um túnel público (como <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">ngrok http 3333</code>) ou teste com a URL do ambiente de produção.
-              </p>
-            ) : null}
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );
