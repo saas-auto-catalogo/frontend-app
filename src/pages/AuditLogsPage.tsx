@@ -67,6 +67,7 @@ export function AuditLogsPage() {
           dealershipName={dealershipName}
           workspaceId={workspaceId}
           userName={user?.name}
+          userEmail={user?.email}
           userInitials={user ? getUserInitials(user.name) : undefined}
           onLogout={handleLogout}
           isLoggingOut={isLoggingOut}
