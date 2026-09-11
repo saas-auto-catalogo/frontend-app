@@ -56,6 +56,7 @@ export function SettingsLayout() {
           dealershipName={workspaceName ?? 'Minha Revenda'}
           workspaceId={workspaceId}
           userName={user?.name}
+          userEmail={user?.email}
           userInitials={user ? getUserInitials(user.name) : undefined}
           onLogout={handleLogout}
         />

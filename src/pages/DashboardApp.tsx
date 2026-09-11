@@ -252,7 +252,9 @@ export function DashboardApp() {
           workspaceId={workspaceId}
           publicFeedUrl={publicFeedUrl}
           userName={user?.name}
+          userEmail={user?.email}
           userInitials={user ? getUserInitials(user.name) : undefined}
+          userRole={user?.role ?? undefined}
           onRefreshSync={handleTriggerSync}
           isSyncing={isSyncing}
           onConfigureMeta={() => setActiveTab('meta-feed')}
