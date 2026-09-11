@@ -93,7 +93,7 @@ export function Sidebar({
     },
     {
       id: 'xml-mapper',
-      label: 'Mapeador XML De/Para',
+      label: 'Mapeador XML',
       icon: <Sliders className="w-4 h-4 text-brand-primary" />,
     },
     {
