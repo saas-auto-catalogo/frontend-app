@@ -90,11 +90,23 @@ export const DMS_PRESETS: DmsPreset[] = [
 export interface DmsPresetSelectorProps {
   selectedPresetId: string;
   onSelectPreset: (preset: DmsPreset) => void;
+  feedUrl?: string | null;
+  totalVehicles?: number | null;
+  isActiveFeed?: boolean;
+}
+
+function formatVehicleCount(count: number | null | undefined): string {
+  if (count == null || count === 0) return 'Nenhum veículo mapeado';
+  if (count === 1) return '1 veículo mapeado';
+  return `${count} veículos mapeados`;
 }
 
 export function DmsPresetSelector({
   selectedPresetId,
   onSelectPreset,
+  feedUrl,
+  totalVehicles,
+  isActiveFeed,
 }: DmsPresetSelectorProps) {
   const [presets, setPresets] = useState<DmsPresetDto[]>([]);
   const [isChangingDms, setIsChangingDms] = useState(false);
@@ -107,16 +119,16 @@ export function DmsPresetSelector({
     loadPresets();
   }, []);
 
+  const allPresets: DmsPreset[] = [
+    ...presets,
+    ...DMS_PRESETS.filter((p) => !presets.some((apiP) => apiP.id === p.id)),
+  ];
+
   const currentPreset =
-    presets.find((p) => p.id === selectedPresetId) ||
-    presets[0] || {
-      id: 'autocerto',
-      name: 'AutoCerto XML',
-      provider: 'AutoCerto Sistemas',
-      confidenceRate: 99.8,
-      detectedRootTag: '<veiculos><veiculo>',
-      endpointExample: 'https://integrador.autocerto.com/feed/loja123/estoque.xml',
-    };
+    allPresets.find((p) => p.id === selectedPresetId) || allPresets[0] || DMS_PRESETS[0];
+
+  const showFeedUrl = Boolean(isActiveFeed && feedUrl);
+  const displayUrl = showFeedUrl ? feedUrl : currentPreset.endpointExample;
 
   return (
     <div className="bg-surface-card rounded-xl border border-surface-border p-5 shadow-subtle space-y-4">
@@ -132,7 +144,7 @@ export function DmsPresetSelector({
                 Gestor de Estoque Conectado (DMS)
               </span>
               <Badge variant="available" size="sm" dot>
-                Conexão Ativa
+                {isActiveFeed ? 'Conexão Ativa' : 'Pré-visualização'}
               </Badge>
             </div>
             <h3 className="text-base font-bold text-typography-heading flex items-center gap-2 mt-0.5">
@@ -140,7 +152,7 @@ export function DmsPresetSelector({
               <span className="text-xs font-normal text-typography-muted">({currentPreset.provider})</span>
             </h3>
             <p className="text-xs font-mono text-typography-subtle mt-0.5 truncate max-w-md">
-              {currentPreset.endpointExample}
+              {displayUrl}
             </p>
           </div>
         </div>
@@ -152,7 +164,9 @@ export function DmsPresetSelector({
               <Sparkles className="w-3.5 h-3.5" />
               <span>{currentPreset.confidenceRate}% de Precisão</span>
             </div>
-            <p className="text-[11px] text-typography-muted">142 veículos mapeados</p>
+            <p className="text-[11px] text-typography-muted">
+              {formatVehicleCount(totalVehicles)}
+            </p>
           </div>
 
           <button
@@ -173,7 +187,7 @@ export function DmsPresetSelector({
             Selecione o novo sistema DMS da sua concessionária para carregar o modelo de De/Para correspondente:
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            {presets.map((preset) => {
+            {allPresets.map((preset) => {
               const isSelected = selectedPresetId === preset.id;
               return (
                 <button

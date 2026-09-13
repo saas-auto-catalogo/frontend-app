@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, CardHeader, CardContent } from '../ui/Card.js';
 import { Badge } from '../ui/Badge.js';
 import { Button } from '../ui/Button.js';
@@ -13,6 +13,9 @@ import {
   Sliders
 } from 'lucide-react';
 import { xmlMapperService, MappingRuleDto } from '../../services/api/xmlMapperService.js';
+import { vehicleService, Vehicle } from '../../services/api/vehicleService.js';
+import { FeedConfigSummary } from '../../services/api/feedService.js';
+import { sourceTypeToPresetId } from '../../utils/feedPresets.js';
 
 export interface FieldMappingRule {
   id: string;
@@ -25,7 +28,10 @@ export interface FieldMappingRule {
 }
 
 export interface XmlMapperStudioProps {
+  workspaceId?: string | null;
+  activeFeed?: FeedConfigSummary | null;
   onFeedConfigured?: () => void;
+  onTriggerSync?: () => void;
 }
 
 const INITIAL_MAPPINGS: Record<string, FieldMappingRule[]> = {
@@ -54,35 +60,91 @@ const INITIAL_MAPPINGS: Record<string, FieldMappingRule[]> = {
   ]
 };
 
-export function XmlMapperStudio({ onFeedConfigured }: XmlMapperStudioProps) {
+export function XmlMapperStudio({
+  workspaceId,
+  activeFeed,
+  onFeedConfigured,
+  onTriggerSync,
+}: XmlMapperStudioProps) {
   const [isWizardMode, setIsWizardMode] = useState<boolean>(false);
   const [selectedPreset, setSelectedPreset] = useState<DmsPreset>(DMS_PRESETS[0]);
   const [mappings, setMappings] = useState<FieldMappingRule[]>(INITIAL_MAPPINGS['autocerto']);
   const [isSaving, setIsSaving] = useState(false);
+  const [sampleVehicle, setSampleVehicle] = useState<Vehicle | null>(null);
+  const [loadingVehicle, setLoadingVehicle] = useState<boolean>(false);
+
+  const loadMappingsForPreset = useCallback(
+    async (preset: DmsPreset) => {
+      try {
+        const apiRules = await xmlMapperService.getMappings(preset.id, workspaceId ?? undefined);
+        if (apiRules && apiRules.length > 0) {
+          setMappings(
+            apiRules.map((r: MappingRuleDto) => ({
+              id: r.id,
+              metaField: r.metaField,
+              metaLabel: r.metaDescription || r.metaField,
+              sourceTag: r.sourceTag,
+              isRequired: r.required,
+              transformType: r.transformType,
+              confidence: r.confidence,
+            }))
+          );
+          return;
+        }
+      } catch {
+        // Fallback local
+      }
+      const rules = INITIAL_MAPPINGS[preset.id] || INITIAL_MAPPINGS['autocerto'];
+      setMappings(rules);
+    },
+    [workspaceId],
+  );
+
+  const loadSampleVehicle = useCallback(async () => {
+    if (!workspaceId) {
+      setSampleVehicle(null);
+      setLoadingVehicle(false);
+      return;
+    }
+    setLoadingVehicle(true);
+    try {
+      const result = await vehicleService.listVehicles(workspaceId, { limit: 1 });
+      setSampleVehicle(result.items[0] ?? null);
+    } catch {
+      setSampleVehicle(null);
+    } finally {
+      setLoadingVehicle(false);
+    }
+  }, [workspaceId]);
+
+  // Auto-detect o preset DMS a partir do feed ativo do workspace.
+  useEffect(() => {
+    const detectedPresetId = activeFeed?.sourceType
+      ? sourceTypeToPresetId(activeFeed.sourceType)
+      : null;
+    if (!detectedPresetId) return;
+
+    const preset = DMS_PRESETS.find((p) => p.id === detectedPresetId);
+    if (preset && preset.id !== selectedPreset.id) {
+      setSelectedPreset(preset);
+      void loadMappingsForPreset(preset);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFeed?.sourceType]);
+
+  // Carregue a amostra real do estoque sempre que o feed ativo mudar.
+  useEffect(() => {
+    void loadSampleVehicle();
+  }, [loadSampleVehicle, activeFeed?._count?.vehicles, activeFeed?.id]);
 
   const handleSelectPreset = async (preset: DmsPreset) => {
     setSelectedPreset(preset);
-    try {
-      const apiRules = await xmlMapperService.getMappings(preset.id);
-      if (apiRules && apiRules.length > 0) {
-        setMappings(
-          apiRules.map((r: MappingRuleDto) => ({
-            id: r.id,
-            metaField: r.metaField,
-            metaLabel: r.metaDescription || r.metaField,
-            sourceTag: r.sourceTag,
-            isRequired: r.required,
-            transformType: r.transformType,
-            confidence: r.confidence,
-          }))
-        );
-        return;
-      }
-    } catch {
-      // Fallback local
-    }
-    const rules = INITIAL_MAPPINGS[preset.id] || INITIAL_MAPPINGS['autocerto'];
-    setMappings(rules);
+    await loadMappingsForPreset(preset);
+  };
+
+  const handleSyncFeed = async () => {
+    if (onTriggerSync) await onTriggerSync();
+    await loadSampleVehicle();
   };
 
   const handleSourceTagChange = (ruleId: string, newTag: string) => {
@@ -170,6 +232,13 @@ export function XmlMapperStudio({ onFeedConfigured }: XmlMapperStudioProps) {
       <DmsPresetSelector
         selectedPresetId={selectedPreset.id}
         onSelectPreset={handleSelectPreset}
+        feedUrl={activeFeed?.feedUrl ?? null}
+        totalVehicles={activeFeed?._count?.vehicles ?? 0}
+        isActiveFeed={
+          Boolean(activeFeed) &&
+          !!activeFeed?.sourceType &&
+          sourceTypeToPresetId(activeFeed.sourceType) === selectedPreset.id
+        }
       />
 
       {/* 2. Grid de Conteúdo: Matriz De/Para (7 cols) + Preview Lado a Lado (5 cols) */}
@@ -281,7 +350,12 @@ export function XmlMapperStudio({ onFeedConfigured }: XmlMapperStudioProps) {
 
         {/* Coluna Direita: Preview Visual Amigável do Veículo Transformado (5 cols) */}
         <div className="lg:col-span-5 sticky top-20">
-          <XmlPreviewPanel />
+          <XmlPreviewPanel
+            vehicle={sampleVehicle}
+            isLoading={loadingVehicle}
+            onValidate={() => void loadSampleVehicle()}
+            onSyncFeed={handleSyncFeed}
+          />
         </div>
       </div>
     </div>

@@ -413,7 +413,12 @@ export function DashboardApp() {
 
           {activeTab === 'xml-mapper' && (
             <div className="space-y-6">
-              <XmlMapperStudio onFeedConfigured={handleFeedConfigured} />
+              <XmlMapperStudio
+                workspaceId={workspaceId}
+                activeFeed={primaryFeed}
+                onFeedConfigured={handleFeedConfigured}
+                onTriggerSync={handleTriggerSync}
+              />
             </div>
           )}
 
