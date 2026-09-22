@@ -39,9 +39,18 @@ export interface VehicleAdData {
 
 export interface MetaAdSimulatorProps {
   vehicle: VehicleAdData;
+  customHeadline?: string;
+  customMessage?: string;
+  ctaType?: 'WHATSAPP' | 'LEAD_FORM';
+  dealershipWhatsApp?: string;
 }
 
-export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
+export function MetaAdSimulator({
+  vehicle,
+  customHeadline,
+  customMessage,
+  ctaType = 'LEAD_FORM',
+}: MetaAdSimulatorProps) {
   const [adFormat, setAdFormat] = useState<'INSTAGRAM_FEED' | 'INSTAGRAM_STORY' | 'FACEBOOK_FEED'>('INSTAGRAM_FEED');
 
   // Cálculo das Custom Labels Dinâmicas
@@ -166,7 +175,7 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
 
               {/* Botão de Ação CTA (Barra Azul Cobalto) */}
               <div className="bg-brand-primary text-white px-4 py-2.5 flex items-center justify-between text-xs font-bold cursor-pointer hover:bg-brand-primaryHover transition-colors">
-                <span>Ver Estoque Completo</span>
+                <span>{ctaType === 'WHATSAPP' ? 'Conversar no WhatsApp' : 'Ver Estoque Completo'}</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
 
@@ -184,7 +193,8 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
                 <div className="text-xs">
                   <span className="font-bold mr-1.5">autoelitemotors</span>
                   <span className="text-typography-body">
-                    {vehicle.make} {vehicle.model} • {vehicle.version}. Ano {vehicle.modelYear} com {vehicle.mileage.toLocaleString('pt-BR')} km rodados.
+                    {customMessage ||
+                      `${vehicle.make} ${vehicle.model} • ${vehicle.version}. Ano ${vehicle.modelYear} com ${vehicle.mileage.toLocaleString('pt-BR')} km rodados.`}
                   </span>
                 </div>
               </div>
@@ -240,7 +250,7 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
                 </div>
 
                 <p className="text-xs font-extrabold text-white leading-snug">
-                  {vehicle.make} {vehicle.model}
+                  {customHeadline || `${vehicle.make} ${vehicle.model}`}
                 </p>
 
                 <div className="flex items-baseline gap-2">
@@ -256,7 +266,7 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
                   <ChevronRight className="w-4 h-4 -rotate-90 text-white" />
                 </div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-white">
-                  Saiba Mais
+                  {ctaType === 'WHATSAPP' ? 'Conversar no WhatsApp' : 'Saiba Mais'}
                 </p>
               </div>
             </div>
@@ -277,8 +287,9 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
               </div>
 
               {/* Texto do Post */}
-              <div className="px-3 py-2 text-typography-body">
-                Confira a oferta imperdível de {vehicle.make} {vehicle.model} {vehicle.modelYear}. Totalmente revisado com laudo cautelar aprovado!
+              <div className="px-3 py-2 text-typography-body whitespace-pre-line">
+                {customMessage ||
+                  `Confira a oferta imperdível de ${vehicle.make} ${vehicle.model} ${vehicle.modelYear}. Totalmente revisado com laudo cautelar aprovado!`}
               </div>
 
               {/* Foto do Carro */}
@@ -290,14 +301,16 @@ export function MetaAdSimulator({ vehicle }: MetaAdSimulatorProps) {
               <div className="p-3 bg-surface-muted/60 border-t border-surface-border flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wider text-typography-subtle font-mono truncate">drivesync.me</p>
-                  <p className="font-bold text-typography-heading truncate">{vehicle.make} {vehicle.model} • {vehicle.version}</p>
+                  <p className="font-bold text-typography-heading truncate">
+                    {customHeadline || `${vehicle.make} ${vehicle.model} • ${vehicle.version}`}
+                  </p>
                   <p className="font-bold text-brand-price mt-0.5">
                     {vehicle.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </p>
                 </div>
 
                 <button className="px-3 py-1.5 bg-surface-card border border-surface-border rounded font-bold text-xs hover:bg-surface-muted shrink-0 flex items-center gap-1">
-                  <span>Ver Oferta</span>
+                  <span>{ctaType === 'WHATSAPP' ? 'Conversar no WhatsApp' : 'Cadastre-se'}</span>
                   <ExternalLink className="w-3 h-3" />
                 </button>
               </div>
