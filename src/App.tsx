@@ -6,6 +6,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
 import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
 import { DashboardApp } from './pages/DashboardApp.js';
 import { AuditLogsPage } from './pages/AuditLogsPage.js';
+import { CreateCampaignWizardPage } from './pages/CreateCampaignWizardPage.js';
 import { OnboardingPage } from './pages/OnboardingPage.js';
 import { MetaCallbackPage } from './pages/MetaCallbackPage.js';
 import { SubscribePage } from './pages/SubscribePage.js';
@@ -49,6 +50,7 @@ export function App() {
               <Route path="/" element={<DashboardApp />} />
               <Route path="/dashboard" element={<Navigate to="/" replace />} />
               <Route path="/audit-logs" element={<AuditLogsPage />} />
+              <Route path="/campaigns/new" element={<CreateCampaignWizardPage />} />
             </Route>
           </Route>
         </Route>
