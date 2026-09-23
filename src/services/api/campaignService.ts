@@ -199,9 +199,13 @@ export const campaignService = {
     return httpClient.get<{ items: MetaPageItem[] }>('/meta/pages');
   },
 
-  async listLeadForms(pageId: string): Promise<{ items: MetaLeadGenFormItem[] }> {
+  async listLeadForms(
+    pageId: string,
+    pageAccessToken?: string | null,
+  ): Promise<{ items: MetaLeadGenFormItem[] }> {
     return httpClient.get<{ items: MetaLeadGenFormItem[] }>('/meta/lead-forms', {
       params: { pageId },
+      headers: pageAccessToken ? { 'x-meta-access-token': pageAccessToken } : undefined,
     });
   },
 

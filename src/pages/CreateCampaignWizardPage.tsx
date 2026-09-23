@@ -8,6 +8,12 @@ import { useAuth } from '../context/AuthContext.js';
 import { useWorkspace } from '../hooks/useWorkspace.js';
 import { campaignService, validateWizardTransition } from '../services/api/campaignService.js';
 import { metaIntegrationService, saveOAuthReturnTo } from '../services/api/metaIntegrationService.js';
+import {
+  clearCampaignWizardDraft,
+  loadCampaignWizardDraft,
+  saveCampaignWizardDraft,
+  shouldRestoreStepTwo,
+} from '../services/campaignWizardDraft.js';
 import { vehicleService, Vehicle } from '../services/api/vehicleService.js';
 import type {
   CampaignWizardState,
@@ -66,7 +72,17 @@ export function CreateCampaignWizardPage() {
   const { user, logout } = useAuth();
   const { workspaceId, workspaceName } = useWorkspace();
 
-  const [state, setState] = useState<CampaignWizardState>(INITIAL_STATE);
+  const [state, setState] = useState<CampaignWizardState>(() => {
+    // Restaura o rascunho salvo antes de iniciar o OAuth da Meta e, se o
+    // retorno vier do callback (`?step=2` ou location.state de sucesso),
+    // abre direto no Passo 2 (Conta & Página).
+    const draft = loadCampaignWizardDraft();
+    const navState = location.state as { metaOAuthResult?: 'success'; message?: string } | null;
+    const restoreStepTwo =
+      navState?.metaOAuthResult === 'success' || shouldRestoreStepTwo(window.location.search);
+    const restored = draft ? { ...INITIAL_STATE, ...draft } : INITIAL_STATE;
+    return restoreStepTwo ? { ...restored, step: 2 } : restored;
+  });
   const [oauthSuccessMessage, setOauthSuccessMessage] = useState<string | null>(() => {
     const navState = location.state as { metaOAuthResult?: 'success'; message?: string } | null;
     return navState?.metaOAuthResult === 'success'
@@ -98,9 +114,11 @@ export function CreateCampaignWizardPage() {
     if (!workspaceId) return;
     setConnectingMeta(true);
     try {
-      // Preserva a rota de origem para o callback OAuth devolver o lojista a
-      // este wizard (e não ao Dashboard) após concluir a autenticação na Meta.
-      saveOAuthReturnTo(`${window.location.pathname}${window.location.search}`);
+      // Preserva o estado do wizard (step, destinationType, ativos e orçamento)
+      // antes de sair para o Facebook, e registra a rota de retorno apontando
+      // para o Passo 2 (/campaigns/new?step=2) para restaurar o fluxo exato.
+      saveCampaignWizardDraft(state);
+      saveOAuthReturnTo(`${window.location.pathname}?step=2`);
       const { authUrl } = await metaIntegrationService.getAuthUrl(workspaceId);
       window.location.href = authUrl;
     } catch (err: unknown) {
@@ -110,7 +128,7 @@ export function CreateCampaignWizardPage() {
     } finally {
       setConnectingMeta(false);
     }
-  }, [workspaceId]);
+  }, [workspaceId, state]);
 
   const step = state.step;
   const selectedAccount = useMemo(
@@ -168,7 +186,10 @@ export function CreateCampaignWizardPage() {
     setFormsLoading(true);
     setFormsError(null);
     try {
-      const result = await campaignService.listLeadForms(state.pageId);
+      // Prioriza o Page Access Token (x-meta-access-token), com fallback para
+      // o metaSessionStore (x-meta-session-token) injetado pelo httpClient.
+      const page = pages.find((item) => item.id === state.pageId);
+      const result = await campaignService.listLeadForms(state.pageId, page?.accessToken);
       setLeadForms(result.items ?? []);
     } catch (error: any) {
       setLeadForms([]);
@@ -176,7 +197,7 @@ export function CreateCampaignWizardPage() {
     } finally {
       setFormsLoading(false);
     }
-  }, [state.pageId]);
+  }, [state.pageId, pages]);
 
   useEffect(() => {
     reloadAccounts();
@@ -347,6 +368,7 @@ export function CreateCampaignWizardPage() {
       });
 
       setPublishedCampaignId(created?.id ?? null);
+      clearCampaignWizardDraft();
       setIsPublishing(false);
     } catch (error: any) {
       setPublishError(error?.message || 'Não foi possível publicar a campanha. Tente novamente.');
@@ -403,7 +425,10 @@ export function CreateCampaignWizardPage() {
               variant="ghost"
               size="sm"
               icon={<ArrowLeft className="w-4 h-4" />}
-              onClick={() => navigate('/', { state: { tab: 'campaigns' } })}
+              onClick={() => {
+                clearCampaignWizardDraft();
+                navigate('/', { state: { tab: 'campaigns' } });
+              }}
             >
               Cancelar e voltar
             </Button>

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { httpClient } from './httpClient.js';
+import { campaignService } from './campaignService.js';
 import { metaSessionStore } from '../auth/metaSessionStore.js';
 
 function mockFetchResponse(status = 200, body: unknown = { items: [] }): Response {
@@ -78,5 +79,45 @@ describe('httpClient: injeção de x-meta-session-token', () => {
 
     await expect(httpClient.get('/meta/ad-accounts')).rejects.toThrow();
     expect(metaSessionStore.getMetaSessionToken('ws-1')).toBeNull();
+  });
+});
+
+describe('campaignService.listLeadForms: injeção de x-meta-access-token', () => {
+  let captured: Headers | null = null;
+
+  const captureFetch = vi.fn(async (_url: string, init?: RequestInit) => {
+    captured = (init?.headers as Headers) ?? null;
+    return mockFetchResponse(200, { items: [] });
+  });
+
+  beforeEach(() => {
+    captured = null;
+    window.localStorage.clear();
+    metaSessionStore.setCurrentWorkspace('ws-1');
+    metaSessionStore.setMetaSessionToken('ws-1', 'token-meta-123');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    metaSessionStore.setCurrentWorkspace(null);
+  });
+
+  it('injeta x-meta-access-token com o token da página quando disponível', async () => {
+    vi.stubGlobal('fetch', captureFetch);
+    await campaignService.listLeadForms('page-123', 'token-page-abc');
+
+    expect(captured).not.toBeNull();
+    expect(captured?.get('x-meta-access-token')).toBe('token-page-abc');
+    expect(captured?.get('x-meta-session-token')).toBe('token-meta-123');
+    expect(captured?.get('x-tenant-id')).toBe('default-tenant');
+  });
+
+  it('não envia x-meta-access-token quando a página não possui token próprio', async () => {
+    vi.stubGlobal('fetch', captureFetch);
+    await campaignService.listLeadForms('page-456');
+
+    expect(captured).not.toBeNull();
+    expect(captured?.get('x-meta-access-token')).toBeNull();
+    expect(captured?.get('x-meta-session-token')).toBe('token-meta-123');
   });
 });

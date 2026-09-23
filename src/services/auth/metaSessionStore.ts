@@ -21,12 +21,39 @@ function resolveWorkspace(workspaceId?: string | null): string | null {
 export const metaSessionStore: MetaSessionStore = {
   getMetaSessionToken(workspaceId?: string | null): string | null {
     const resolved = resolveWorkspace(workspaceId);
-    if (!resolved) return null;
     try {
-      return window.localStorage.getItem(storageKey(resolved));
+      if (resolved) {
+        const direct = window.localStorage.getItem(storageKey(resolved));
+        if (direct !== null) {
+          return direct;
+        }
+
+        // Fallback resiliente: se a chave exata do workspace não for
+        // encontrada (pequeno descasamento de identificadores de tenant),
+        // percorre as chaves `ds_meta_session_*`. O fallback só é aplicado
+        // quando há exatamente UM token armazenado — com múltiplos tenants
+        // emissários o resultado seria ambíguo e poderia vazar tokens entre
+        // workspaces.
+        let fallbackToken: string | null = null;
+        let fallbackCount = 0;
+        for (let i = 0; i < window.localStorage.length; i += 1) {
+          const key = window.localStorage.key(i);
+          if (key && key.startsWith(STORAGE_PREFIX)) {
+            const value = window.localStorage.getItem(key);
+            if (value !== null) {
+              fallbackToken = value;
+              fallbackCount += 1;
+            }
+          }
+        }
+        if (fallbackCount === 1) {
+          return fallbackToken;
+        }
+      }
     } catch {
-      return null;
+      // localStorage indisponível (modo privado/SSR).
     }
+    return null;
   },
 
   setMetaSessionToken(workspaceId: string, token: string | null): void {
