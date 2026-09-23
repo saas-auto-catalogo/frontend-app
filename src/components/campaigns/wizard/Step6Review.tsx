@@ -106,6 +106,9 @@ export interface Step6ReviewProps {
   eligibleCount: number | null;
   isPublishing?: boolean;
   publishError?: string | null;
+  metaAuthError?: boolean;
+  onConnectMeta?: () => void;
+  isConnectingMeta?: boolean;
   onPublish: () => void;
   onBack?: () => void;
   onGoToAssets?: () => void;
@@ -124,6 +127,9 @@ export function Step6Review({
   eligibleCount,
   isPublishing,
   publishError,
+  metaAuthError = false,
+  onConnectMeta,
+  isConnectingMeta = false,
   onPublish,
   onBack,
   onGoToAssets,
@@ -313,7 +319,34 @@ export function Step6Review({
         </div>
       )}
 
-      {!assetsValid && (
+      {metaAuthError && (
+        <div
+          className="p-4 rounded-lg border border-status-error-border bg-status-error-bg"
+          role="alert"
+        >
+          <p className="text-sm font-semibold text-status-error-text">
+            Sessão Meta não conectada
+          </p>
+          <p className="mt-1 text-xs text-status-error-text">
+            Conecte sua conta de anúncios da Meta para publicar a campanha.
+          </p>
+          {onConnectMeta && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              icon={<ExternalLink className="w-3.5 h-3.5" />}
+              onClick={onConnectMeta}
+              disabled={isPublishing}
+              loading={isConnectingMeta}
+            >
+              {isConnectingMeta ? 'Conectando...' : 'Conectar conta da Meta'}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {!metaAuthError && !assetsValid && (
         <div
           className="p-4 rounded-lg border border-status-error-border bg-status-error-bg"
           role="alert"

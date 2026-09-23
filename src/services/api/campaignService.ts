@@ -243,26 +243,30 @@ export interface ListCampaignsQuery {
 }
 
 export const campaignService = {
-  async listAdAccounts(): Promise<{ items: MetaAdAccountItem[] }> {
-    return httpClient.get<{ items: MetaAdAccountItem[] }>('/meta/ad-accounts');
+  async listAdAccounts(workspaceId?: string): Promise<{ items: MetaAdAccountItem[] }> {
+    return httpClient.get<{ items: MetaAdAccountItem[] }>('/meta/ad-accounts', {
+      tenantId: workspaceId,
+    });
   },
 
-  async listPages(): Promise<{ items: MetaPageItem[] }> {
-    return httpClient.get<{ items: MetaPageItem[] }>('/meta/pages');
+  async listPages(workspaceId?: string): Promise<{ items: MetaPageItem[] }> {
+    return httpClient.get<{ items: MetaPageItem[] }>('/meta/pages', { tenantId: workspaceId });
   },
 
   async listLeadForms(
     pageId: string,
     pageAccessToken?: string | null,
+    workspaceId?: string,
   ): Promise<{ items: MetaLeadGenFormItem[] }> {
     return httpClient.get<{ items: MetaLeadGenFormItem[] }>('/meta/lead-forms', {
       params: { pageId },
       headers: pageAccessToken ? { 'x-meta-access-token': pageAccessToken } : undefined,
+      tenantId: workspaceId,
     });
   },
 
-  async createCampaign(payload: CreateCampaignInput): Promise<CampaignDTO> {
-    return httpClient.post<CampaignDTO>('/meta/campaigns', payload);
+  async createCampaign(payload: CreateCampaignInput, workspaceId?: string): Promise<CampaignDTO> {
+    return httpClient.post<CampaignDTO>('/meta/campaigns', payload, { tenantId: workspaceId });
   },
 
   async listCampaigns(query?: ListCampaignsQuery): Promise<{ items: CampaignDTO[]; total: number; page: number; limit: number }> {

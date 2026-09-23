@@ -190,6 +190,30 @@ describe('Step2AccountPage: seleção obrigatória de conta e página', () => {
   });
 });
 
+describe('Step2AccountPage: erro de autenticação Meta (G6)', () => {
+  it('exibe CTA de reconexão quando o carregamento de contas falha por autenticação', async () => {
+    const onConnectMeta = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Step2AccountPage
+        {...baseProps}
+        accounts={[]}
+        accountsError="Token de acesso Meta não fornecido. Informe x-meta-session-token."
+        onConnectMeta={onConnectMeta}
+      />,
+    );
+
+    expect(screen.getByText(/Token de acesso Meta não fornecido/i)).toBeInTheDocument();
+
+    const reauthButton = screen.getByRole('button', { name: /Vincular seus ativos Meta/i });
+    expect(reauthButton).toBeInTheDocument();
+
+    await user.click(reauthButton);
+    expect(onConnectMeta).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('Step2AccountPage: erro ao carregar formulários instantâneos', () => {
   const leadFormProps = {
     ...baseProps,

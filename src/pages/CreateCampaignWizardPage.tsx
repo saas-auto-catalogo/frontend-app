@@ -13,6 +13,7 @@ import {
   validateWizardTransition,
 } from '../services/api/campaignService.js';
 import { metaIntegrationService, saveOAuthReturnTo } from '../services/api/metaIntegrationService.js';
+import { metaSessionStore } from '../services/auth/metaSessionStore.js';
 import {
   clearCampaignWizardDraft,
   loadCampaignWizardDraft,
@@ -115,6 +116,14 @@ export function CreateCampaignWizardPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [publishedCampaignId, setPublishedCampaignId] = useState<string | null>(null);
 
+  // G3: sincroniza o workspace ativo no metaSessionStore (e persiste via G1)
+  // para que o httpClient injete `x-meta-session-token` mesmo após reload.
+  useEffect(() => {
+    if (workspaceId) {
+      metaSessionStore.setCurrentWorkspace(workspaceId);
+    }
+  }, [workspaceId]);
+
   const handleConnectMeta = useCallback(async () => {
     if (!workspaceId) return;
     setConnectingMeta(true);
@@ -164,7 +173,7 @@ export function CreateCampaignWizardPage() {
     setAccountsLoading(true);
     setAccountsError(null);
     try {
-      const result = await campaignService.listAdAccounts();
+      const result = await campaignService.listAdAccounts(workspaceId);
       const items = result.items ?? [];
       setAccounts(items);
       // Ao retornar do OAuth (ou recarregar com token novo), seleciona
@@ -179,13 +188,13 @@ export function CreateCampaignWizardPage() {
     } finally {
       setAccountsLoading(false);
     }
-  }, []);
+  }, [workspaceId]);
 
   const reloadPages = useCallback(async () => {
     setPagesLoading(true);
     setPagesError(null);
     try {
-      const result = await campaignService.listPages();
+      const result = await campaignService.listPages(workspaceId);
       const items = result.items ?? [];
       setPages(items);
       // Com apenas uma página disponível, seleciona-a automaticamente para
@@ -199,7 +208,7 @@ export function CreateCampaignWizardPage() {
     } finally {
       setPagesLoading(false);
     }
-  }, []);
+  }, [workspaceId]);
 
   const reloadLeadForms = useCallback(async () => {
     if (!state.pageId) return;
@@ -209,7 +218,11 @@ export function CreateCampaignWizardPage() {
       // Prioriza o Page Access Token (x-meta-access-token), com fallback para
       // o metaSessionStore (x-meta-session-token) injetado pelo httpClient.
       const page = pages.find((item) => item.id === state.pageId);
-      const result = await campaignService.listLeadForms(state.pageId, page?.accessToken);
+      const result = await campaignService.listLeadForms(
+        state.pageId,
+        page?.accessToken,
+        workspaceId,
+      );
       setLeadForms(result.items ?? []);
     } catch (error: any) {
       setLeadForms([]);
@@ -217,7 +230,7 @@ export function CreateCampaignWizardPage() {
     } finally {
       setFormsLoading(false);
     }
-  }, [state.pageId, pages]);
+  }, [state.pageId, pages, workspaceId]);
 
   useEffect(() => {
     reloadAccounts();
@@ -337,8 +350,14 @@ export function CreateCampaignWizardPage() {
       return;
     }
 
-    // Caso de borda: rascunho obsoleto apontando para conta ausente/inativa.
-    if (state.step === 2 && accounts.length > 0) {
+    // G6/Casos de borda no Passo 2: sem integração Meta conectada (erro de
+    // autenticação) ou sem contas vinculadas, o avanço é bloqueado e o usuário
+    // é orientado a conectar a conta — impede IDs recuperados de rascunhos.
+    if (state.step === 2 && !accountsLoading) {
+      if (accountsError || accounts.length === 0) {
+        setPublishError('Conecte sua conta de anúncios da Meta para continuar.');
+        return;
+      }
       const selected = accounts.find((item) => item.id === state.adAccountId);
       if (!selected || selected.accountStatus !== 1) {
         setPublishError('Selecione uma conta de anúncios da Meta ativa para continuar.');
@@ -353,7 +372,7 @@ export function CreateCampaignWizardPage() {
 
     setPublishError(null);
     patch({ step: state.step + 1 });
-  }, [state, eligibleCount, accounts, patch]);
+  }, [state, eligibleCount, accounts, accountsLoading, accountsError, patch]);
 
   const handlePublish = useCallback(async () => {
     if (!workspaceId) return;
@@ -369,6 +388,12 @@ export function CreateCampaignWizardPage() {
     });
     if (!validation.valid) {
       setPublishError(validation.message ?? 'Revise as configurações.');
+      return;
+    }
+
+    // G6: sem sessão Meta válida (erro de autenticação), bloqueia a publicação.
+    if (accountsError) {
+      setPublishError('Sessão Meta não conectada. Conecte sua conta de anúncios para publicar.');
       return;
     }
 
@@ -396,7 +421,7 @@ export function CreateCampaignWizardPage() {
           : undefined,
       });
 
-      const created = await campaignService.createCampaign(payload);
+      const created = await campaignService.createCampaign(payload, workspaceId);
 
       setPublishedCampaignId(created?.id ?? null);
       clearCampaignWizardDraft();
@@ -405,7 +430,7 @@ export function CreateCampaignWizardPage() {
       setPublishError(error?.message || 'Não foi possível publicar a campanha. Tente novamente.');
       setIsPublishing(false);
     }
-  }, [workspaceId, state]);
+  }, [workspaceId, state, accountsError]);
 
   const handleLogout = async () => {
     try {
@@ -626,6 +651,9 @@ export function CreateCampaignWizardPage() {
                     eligibleCount={eligibleCount}
                     isPublishing={isPublishing}
                     publishError={publishError}
+                    metaAuthError={!!accountsError}
+                    onConnectMeta={handleConnectMeta}
+                    isConnectingMeta={connectingMeta}
                     onPublish={handlePublish}
                     onBack={() => goToStep(5)}
                     onGoToAssets={() => goToStep(2)}
