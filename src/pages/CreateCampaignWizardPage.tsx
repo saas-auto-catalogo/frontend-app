@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button.js';
 import { useAuth } from '../context/AuthContext.js';
 import { useWorkspace } from '../hooks/useWorkspace.js';
 import { campaignService, validateWizardTransition } from '../services/api/campaignService.js';
+import { metaIntegrationService } from '../services/api/metaIntegrationService.js';
 import { vehicleService, Vehicle } from '../services/api/vehicleService.js';
 import type {
   CampaignWizardState,
@@ -79,11 +80,27 @@ export function CreateCampaignWizardPage() {
   const [accountsError, setAccountsError] = useState<string | null>(null);
   const [pagesError, setPagesError] = useState<string | null>(null);
   const [formsError, setFormsError] = useState<string | null>(null);
+  const [connectingMeta, setConnectingMeta] = useState(false);
 
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [publishedCampaignId, setPublishedCampaignId] = useState<string | null>(null);
+
+  const handleConnectMeta = useCallback(async () => {
+    if (!workspaceId) return;
+    setConnectingMeta(true);
+    try {
+      const { authUrl } = await metaIntegrationService.getAuthUrl(workspaceId);
+      window.location.href = authUrl;
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Erro ao gerar link de conexão com a Meta.';
+      setAccountsError(message);
+    } finally {
+      setConnectingMeta(false);
+    }
+  }, [workspaceId]);
 
   const step = state.step;
   const selectedAccount = useMemo(
@@ -429,6 +446,8 @@ export function CreateCampaignWizardPage() {
                     onReloadAccounts={reloadAccounts}
                     onReloadPages={reloadPages}
                     onReloadForms={reloadLeadForms}
+                    onConnectMeta={handleConnectMeta}
+                    isConnectingMeta={connectingMeta}
                   />
                 )}
 
