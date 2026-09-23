@@ -12,6 +12,16 @@ import type {
 export const MIN_DAILY_BUDGET_CENTS = 1500; // R$ 15,00/dia
 export const MIN_DAILY_BUDGET_REAIS = MIN_DAILY_BUDGET_CENTS / 100;
 
+// Espelha o AD_ACCOUNT_REF_REGEX do backend (backend-api/src/schemas/campaign.ts):
+// UUID local ou metaAccountId no formato "act_<números>" / "<números>".
+export const AD_ACCOUNT_REF_REGEX =
+  /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|(?:act_)?\d{1,30})$/i;
+
+export function isValidAdAccountId(value?: string | null): boolean {
+  if (!value) return false;
+  return AD_ACCOUNT_REF_REGEX.test(value.trim());
+}
+
 const E164_REGEX = /^[1-9]\d{9,14}$/;
 
 export function validateWhatsappE164(raw: string): boolean {
@@ -92,6 +102,8 @@ export function validateEndDate(endDate: string, startDate: string): boolean {
 export interface WizardTransitionContext {
   step: number;
   destinationType?: CampaignDestinationType;
+  adAccountId?: string;
+  pageId?: string;
   whatsappNumber?: string;
   metaLeadFormId?: string;
   dailyBudgetReais?: number;
@@ -102,24 +114,20 @@ export interface TransitionResult {
   message?: string;
 }
 
+const ACCOUNT_REQUIRED_MSG = 'Selecione uma conta de anúncios da Meta ativa para continuar.';
+const PAGE_REQUIRED_MSG = 'Selecione uma Página do Facebook para vincular à campanha.';
+
 export function validateWizardTransition(ctx: WizardTransitionContext): TransitionResult {
   switch (ctx.step) {
     case 2: {
-      if (ctx.destinationType === 'WHATSAPP_MESSAGE') {
-        if (!validateWhatsappE164(ctx.whatsappNumber ?? '')) {
-          return {
-            valid: false,
-            message: 'Informe um número de WhatsApp válido no padrão internacional E.164.',
-          };
-        }
-      } else if (ctx.destinationType === 'INSTANT_LEAD_FORM') {
-        if (!ctx.metaLeadFormId) {
-          return {
-            valid: false,
-            message: 'Selecione um formulário instantâneo da página para receber os cadastros.',
-          };
-        }
+      if (!isValidAdAccountId(ctx.adAccountId)) {
+        return { valid: false, message: ACCOUNT_REQUIRED_MSG };
       }
+      if (!ctx.pageId) {
+        return { valid: false, message: PAGE_REQUIRED_MSG };
+      }
+      const destination = validateDestination(ctx);
+      if (!destination.valid) return destination;
       return { valid: true };
     }
     case 4: {
@@ -132,9 +140,46 @@ export function validateWizardTransition(ctx: WizardTransitionContext): Transiti
       }
       return { valid: true };
     }
+    case 6: {
+      if (!isValidAdAccountId(ctx.adAccountId)) {
+        return { valid: false, message: ACCOUNT_REQUIRED_MSG };
+      }
+      if (!ctx.pageId) {
+        return { valid: false, message: PAGE_REQUIRED_MSG };
+      }
+      const destination = validateDestination(ctx);
+      if (!destination.valid) return destination;
+      const budget = ctx.dailyBudgetReais ?? 0;
+      if (!Number.isFinite(budget) || budget < MIN_DAILY_BUDGET_REAIS) {
+        return {
+          valid: false,
+          message: `Orçamento diário deve ser de no mínimo R$ ${MIN_DAILY_BUDGET_REAIS.toFixed(2)}.`,
+        };
+      }
+      return { valid: true };
+    }
     default:
       return { valid: true };
   }
+}
+
+function validateDestination(ctx: WizardTransitionContext): TransitionResult {
+  if (ctx.destinationType === 'WHATSAPP_MESSAGE') {
+    if (!validateWhatsappE164(ctx.whatsappNumber ?? '')) {
+      return {
+        valid: false,
+        message: 'Informe um número de WhatsApp válido no padrão internacional E.164.',
+      };
+    }
+  } else if (ctx.destinationType === 'INSTANT_LEAD_FORM') {
+    if (!ctx.metaLeadFormId) {
+      return {
+        valid: false,
+        message: 'Selecione um formulário instantâneo da página para receber os cadastros.',
+      };
+    }
+  }
+  return { valid: true };
 }
 
 export interface BuildCampaignPayloadInput {
@@ -155,6 +200,13 @@ export interface BuildCampaignPayloadInput {
 }
 
 export function buildCampaignPayload(input: BuildCampaignPayloadInput): CreateCampaignInput {
+  if (!isValidAdAccountId(input.adAccountId)) {
+    throw new Error('Selecione uma conta de anúncios da Meta ativa para continuar.');
+  }
+  if (!input.pageId) {
+    throw new Error('Selecione uma Página do Facebook para vincular à campanha.');
+  }
+
   const { dailyBudget, lifetimeBudget } = buildBudgetPayload(input.dailyBudgetReais);
 
   return {

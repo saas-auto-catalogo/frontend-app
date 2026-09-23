@@ -97,6 +97,99 @@ describe('Step2AccountPage: alerta de reautenticação quando páginas vazias', 
   });
 });
 
+describe('Step2AccountPage: seleção obrigatória de conta e página', () => {
+  const singlePage: MetaPageItem[] = [
+    { id: 'page-001', name: 'Auto Elite Veículos', isPublished: true },
+  ];
+
+  it('exibe aviso quando nenhuma conta ativa está selecionada', () => {
+    render(<Step2AccountPage {...baseProps} adAccountId="" pageId="" pages={singlePage} />);
+
+    expect(
+      screen.getByText('Selecione uma conta de anúncios da Meta ativa para continuar.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Selecione uma Página do Facebook para vincular à campanha.')).toBeInTheDocument();
+  });
+
+  it('não exibe aviso de conta quando há conta ativa selecionada', () => {
+    render(<Step2AccountPage {...baseProps} pageId="page-001" pages={singlePage} />);
+
+    expect(
+      screen.queryByText('Selecione uma conta de anúncios da Meta ativa para continuar.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Selecione uma Página do Facebook para vincular à campanha.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('exibe aviso quando nenhuma página está selecionada', () => {
+    render(
+      <Step2AccountPage {...baseProps} adAccountId="" pageId="" pages={singlePage} />,
+    );
+
+    expect(
+      screen.getByText('Selecione uma Página do Facebook para vincular à campanha.'),
+    ).toBeInTheDocument();
+  });
+
+  it('exibe aviso quando a conta selecionada está inativa', () => {
+    const inactiveAccount: MetaAdAccountItem = { ...account, accountStatus: 2 };
+
+    render(
+      <Step2AccountPage {...baseProps} adAccountId={inactiveAccount.id} accounts={[inactiveAccount]} />,
+    );
+
+    expect(
+      screen.getByText('Selecione uma conta de anúncios da Meta ativa para continuar.'),
+    ).toBeInTheDocument();
+  });
+
+  it('emite onAdAccountChange ao selecionar conta ativa', async () => {
+    const onAdAccountChange = vi.fn();
+    const user = userEvent.setup();
+
+    render(<Step2AccountPage {...baseProps} adAccountId="" onAdAccountChange={onAdAccountChange} />);
+
+    await user.click(screen.getByRole('button', { name: /Conta Principal/ }));
+    expect(onAdAccountChange).toHaveBeenCalledWith('act_123456789');
+  });
+
+  it('emite onPageChange ao selecionar página', async () => {
+    const onPageChange = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Step2AccountPage
+        {...baseProps}
+        pageId=""
+        pages={singlePage}
+        onPageChange={onPageChange}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /Auto Elite Veículos/ }));
+    expect(onPageChange).toHaveBeenCalledWith('page-001');
+  });
+
+  it('não emite onAdAccountChange ao clicar em conta inativa', async () => {
+    const onAdAccountChange = vi.fn();
+    const user = userEvent.setup();
+    const inactiveAccount: MetaAdAccountItem = { ...account, accountStatus: 2 };
+
+    render(
+      <Step2AccountPage
+        {...baseProps}
+        adAccountId=""
+        accounts={[inactiveAccount]}
+        onAdAccountChange={onAdAccountChange}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /Conta Principal/ }));
+    expect(onAdAccountChange).not.toHaveBeenCalled();
+  });
+});
+
 describe('Step2AccountPage: erro ao carregar formulários instantâneos', () => {
   const leadFormProps = {
     ...baseProps,
