@@ -96,3 +96,55 @@ describe('Step2AccountPage: alerta de reautenticação quando páginas vazias', 
     ).not.toBeInTheDocument();
   });
 });
+
+describe('Step2AccountPage: erro ao carregar formulários instantâneos', () => {
+  const leadFormProps = {
+    ...baseProps,
+    destinationType: 'INSTANT_LEAD_FORM' as CampaignDestinationType,
+    pageId: 'page-001',
+    pages: [
+      { id: 'page-001', name: 'Auto Elite Veículos', isPublished: true },
+    ] as MetaPageItem[],
+  };
+
+  it('exibe mensagem amigável e botão "Reautenticar com a Meta" quando formsError', async () => {
+    const onConnectMeta = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Step2AccountPage
+        {...leadFormProps}
+        formsError="Token de acesso Meta não fornecido. Informe x-meta-session-token."
+        onConnectMeta={onConnectMeta}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Não foi possível carregar os formulários instantâneos desta página/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Token de acesso Meta não fornecido/i)).toBeInTheDocument();
+
+    const reauthButton = screen.getByRole('button', { name: /Reautenticar com a Meta/i });
+    expect(reauthButton).toBeInTheDocument();
+
+    await user.click(reauthButton);
+    expect(onConnectMeta).toHaveBeenCalledTimes(1);
+  });
+
+  it('não mostra botão de reautenticação quando onConnectMeta não é fornecido', () => {
+    render(
+      <Step2AccountPage
+        {...leadFormProps}
+        formsError="Erro de formação"
+        onConnectMeta={undefined}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Não foi possível carregar os formulários instantâneos desta página/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Reautenticar com a Meta/i }),
+    ).not.toBeInTheDocument();
+  });
+});

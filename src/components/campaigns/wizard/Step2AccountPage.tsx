@@ -378,8 +378,21 @@ export function Step2AccountPage({
           )}
 
           {formsError && (
-            <div className="p-3 rounded-lg border border-status-error-border bg-status-error-bg text-sm text-status-error-text">
-              {formsError}
+            <div className="flex flex-col gap-2 p-3 rounded-lg border border-surface-border bg-surface-muted text-sm">
+              <p className="text-status-error-text font-medium">
+                Não foi possível carregar os formulários instantâneos desta página.
+              </p>
+              <p className="text-xs text-typography-muted">{formsError}</p>
+              {onConnectMeta ? (
+                <button
+                  type="button"
+                  onClick={onConnectMeta}
+                  disabled={isConnectingMeta}
+                  className="text-brand-primary font-semibold underline text-xs flex items-center gap-1 w-fit hover:text-brand-primaryHover disabled:opacity-50"
+                >
+                  {isConnectingMeta ? 'Conectando à Meta...' : 'Reautenticar com a Meta'} <ExternalLink className="w-3 h-3" />
+                </button>
+              ) : null}
             </div>
           )}
 
