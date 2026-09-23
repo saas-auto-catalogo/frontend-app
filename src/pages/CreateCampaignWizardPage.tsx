@@ -6,7 +6,12 @@ import { Header } from '../components/layout/Header.js';
 import { Button } from '../components/ui/Button.js';
 import { useAuth } from '../context/AuthContext.js';
 import { useWorkspace } from '../hooks/useWorkspace.js';
-import { campaignService, validateWizardTransition } from '../services/api/campaignService.js';
+import {
+  buildCampaignPayload,
+  campaignService,
+  isValidAdAccountId,
+  validateWizardTransition,
+} from '../services/api/campaignService.js';
 import { metaIntegrationService, saveOAuthReturnTo } from '../services/api/metaIntegrationService.js';
 import {
   clearCampaignWizardDraft,
@@ -144,6 +149,15 @@ export function CreateCampaignWizardPage() {
     [leadForms, state.metaLeadFormId],
   );
 
+  const assetsValid = useMemo(
+    () =>
+      isValidAdAccountId(state.adAccountId) &&
+      !!selectedAccount &&
+      !!state.pageId &&
+      !!selectedPage,
+    [state.adAccountId, state.pageId, selectedAccount, selectedPage],
+  );
+
   const sampleVehicle = useMemo<Vehicle | null>(() => sampleVehicles[0] ?? null, [sampleVehicles]);
 
   const reloadAccounts = useCallback(async () => {
@@ -172,7 +186,13 @@ export function CreateCampaignWizardPage() {
     setPagesError(null);
     try {
       const result = await campaignService.listPages();
-      setPages(result.items ?? []);
+      const items = result.items ?? [];
+      setPages(items);
+      // Com apenas uma página disponível, seleciona-a automaticamente para
+      // agilizar a experiência (mesmo comportamento de reloadAccounts).
+      if (items.length === 1) {
+        setState((prev) => (prev.pageId ? prev : { ...prev, pageId: items[0].id }));
+      }
     } catch (error: any) {
       setPages([]);
       setPagesError(error?.message || 'Não foi possível carregar as páginas.');
@@ -305,6 +325,8 @@ export function CreateCampaignWizardPage() {
     const transition = validateWizardTransition({
       step: state.step,
       destinationType: state.destinationType,
+      adAccountId: state.adAccountId,
+      pageId: state.pageId,
       whatsappNumber: state.whatsappNumber,
       metaLeadFormId: state.metaLeadFormId,
       dailyBudgetReais: state.dailyBudgetReais,
@@ -315,6 +337,15 @@ export function CreateCampaignWizardPage() {
       return;
     }
 
+    // Caso de borda: rascunho obsoleto apontando para conta ausente/inativa.
+    if (state.step === 2 && accounts.length > 0) {
+      const selected = accounts.find((item) => item.id === state.adAccountId);
+      if (!selected || selected.accountStatus !== 1) {
+        setPublishError('Selecione uma conta de anúncios da Meta ativa para continuar.');
+        return;
+      }
+    }
+
     if (state.step === 3 && state.stockSelectionMode === 'CUSTOM_FILTER' && eligibleCount === 0) {
       setPublishError('Selecione ao menos um veículo elegível antes de continuar.');
       return;
@@ -322,7 +353,7 @@ export function CreateCampaignWizardPage() {
 
     setPublishError(null);
     patch({ step: state.step + 1 });
-  }, [state, eligibleCount, patch]);
+  }, [state, eligibleCount, accounts, patch]);
 
   const handlePublish = useCallback(async () => {
     if (!workspaceId) return;
@@ -330,6 +361,8 @@ export function CreateCampaignWizardPage() {
     const validation = validateWizardTransition({
       step: 6,
       destinationType: state.destinationType,
+      adAccountId: state.adAccountId,
+      pageId: state.pageId,
       whatsappNumber: state.whatsappNumber,
       metaLeadFormId: state.metaLeadFormId,
       dailyBudgetReais: state.dailyBudgetReais,
@@ -342,30 +375,28 @@ export function CreateCampaignWizardPage() {
     setIsPublishing(true);
     setPublishError(null);
     try {
-      const created = await campaignService.createCampaign({
-        name: state.campaignName || `Campanha ${state.destinationType === 'WHATSAPP_MESSAGE' ? 'WhatsApp' : 'Leads'} - ${new Date().toLocaleDateString('pt-BR')}`,
+      const payload = buildCampaignPayload({
+        name: `Campanha ${state.destinationType === 'WHATSAPP_MESSAGE' ? 'WhatsApp' : 'Leads'} - ${new Date().toLocaleDateString('pt-BR')}`,
         destinationType: state.destinationType,
         adAccountId: state.adAccountId,
         pageId: state.pageId,
-        ...(state.destinationType === 'WHATSAPP_MESSAGE' ? { whatsappNumber: state.whatsappNumber } : {}),
-        ...(state.destinationType === 'INSTANT_LEAD_FORM' ? { metaLeadFormId: state.metaLeadFormId } : {}),
-        dailyBudget: Math.round(state.dailyBudgetReais * 100),
-        startDate: new Date().toISOString(),
-        ...(state.continuousPacing ? {} : state.endDate ? { endDate: new Date(state.endDate).toISOString() } : {}),
+        whatsappNumber: state.destinationType === 'WHATSAPP_MESSAGE' ? state.whatsappNumber : undefined,
+        metaLeadFormId: state.destinationType === 'INSTANT_LEAD_FORM' ? state.metaLeadFormId : undefined,
+        dailyBudgetReais: state.dailyBudgetReais,
+        radiusKm: state.radiusKm,
+        campaignName: state.campaignName,
         headlineTemplate: state.headlineTemplate,
         messageTemplate: state.messageTemplate,
         whatsappGreeting: state.whatsappGreeting,
-        targetingGeo: {
-          customLocations: [
-            {
-              latitude: 0,
-              longitude: 0,
-              radius: state.radiusKm,
-              distanceUnit: 'kilometer',
-            },
-          ],
-        },
+        startDate: new Date().toISOString(),
+        endDate: state.continuousPacing
+          ? undefined
+          : state.endDate
+          ? new Date(state.endDate).toISOString()
+          : undefined,
       });
+
+      const created = await campaignService.createCampaign(payload);
 
       setPublishedCampaignId(created?.id ?? null);
       clearCampaignWizardDraft();
@@ -597,6 +628,7 @@ export function CreateCampaignWizardPage() {
                     publishError={publishError}
                     onPublish={handlePublish}
                     onBack={() => goToStep(5)}
+                    onGoToAssets={() => goToStep(2)}
                   />
                 )}
 
@@ -646,7 +678,7 @@ export function CreateCampaignWizardPage() {
                     size="lg"
                     icon={<Rocket className="w-4 h-4" />}
                     onClick={handlePublish}
-                    disabled={isPublishing}
+                    disabled={isPublishing || !assetsValid}
                   >
                     {isPublishing ? 'Publicando...' : 'Publicar Campanha'}
                   </Button>

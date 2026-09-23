@@ -8,6 +8,7 @@ import {
   applyHeadlineTemplate,
   applyMessageTemplate,
   formatPriceBRL,
+  isValidAdAccountId,
 } from '../../../services/api/campaignService.js';
 
 export interface CampaignPublishedSuccessProps {
@@ -107,6 +108,7 @@ export interface Step6ReviewProps {
   publishError?: string | null;
   onPublish: () => void;
   onBack?: () => void;
+  onGoToAssets?: () => void;
 }
 
 function formatEndDate(endDate?: string): string {
@@ -124,8 +126,12 @@ export function Step6Review({
   publishError,
   onPublish,
   onBack,
+  onGoToAssets,
 }: Step6ReviewProps) {
   const budgetValid = state.dailyBudgetReais >= MIN_DAILY_BUDGET_REAIS;
+  const accountConfigured = !!account && isValidAdAccountId(state.adAccountId);
+  const pageConfigured = !!page && !!state.pageId;
+  const assetsValid = accountConfigured && pageConfigured;
   const sampleContext = { make: 'Veículo', model: 'Selecionado', price: 150000 };
   const renderedHeadline = applyHeadlineTemplate(state.headlineTemplate, sampleContext);
   const renderedMessage = applyMessageTemplate(state.messageTemplate, sampleContext);
@@ -307,6 +313,41 @@ export function Step6Review({
         </div>
       )}
 
+      {!assetsValid && (
+        <div
+          className="p-4 rounded-lg border border-status-error-border bg-status-error-bg"
+          role="alert"
+        >
+          <p className="text-sm font-semibold text-status-error-text">
+            Ativos não configurados
+          </p>
+          <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-xs text-status-error-text">
+            {!accountConfigured && (
+              <li>
+                Conta de anúncios não selecionada. Volte ao Passo 2 para escolher uma conta ativa.
+              </li>
+            )}
+            {!pageConfigured && (
+              <li>
+                Página do Facebook não selecionada. Volte ao Passo 2 para escolher uma página.
+              </li>
+            )}
+          </ul>
+          {onGoToAssets && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              icon={<Store className="w-4 h-4" />}
+              onClick={onGoToAssets}
+              disabled={isPublishing}
+            >
+              Ir para Conta & Página
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-3 pt-2">
         <Button
           variant="ghost"
@@ -322,7 +363,7 @@ export function Step6Review({
           size="lg"
           icon={<Rocket className="w-4 h-4" />}
           onClick={onPublish}
-          disabled={isPublishing || !budgetValid}
+          disabled={isPublishing || !budgetValid || !assetsValid}
           className="ml-auto"
         >
           {isPublishing ? 'Publicando...' : 'Publicar Campanha'}

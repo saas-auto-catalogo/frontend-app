@@ -72,10 +72,16 @@ export function Step2AccountPage({
   isConnectingMeta = false,
 }: Step2AccountPageProps) {
   const selectedPage = pages.find((page) => page.id === pageId);
+  const selectedAccount = accounts.find((account) => account.id === adAccountId);
   const hasNoAccounts = !accountsLoading && !accountsError && accounts.length === 0;
   const hasNoPages = !pagesLoading && !pagesError && pages.length === 0;
   const activeForms = leadForms.filter((form) => form.status === 'ACTIVE');
   const hasNoForms = !formsLoading && leadForms.length === 0;
+  const showAccountHint =
+    !accountsLoading && !accountsError && accounts.length > 0 && !(
+      selectedAccount && selectedAccount.accountStatus === 1
+    );
+  const showPageHint = !pagesLoading && !pagesError && pages.length > 0 && !selectedPage;
 
   useEffect(() => {
     if (selectedPage?.whatsappNumber && !whatsappNumber) {
@@ -181,7 +187,7 @@ export function Step2AccountPage({
                       </Badge>
                     )}
                   </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-typography-muted font-mono">
+                  <div className="mt-2 flex items-center gap-2 text-xs text-typography-muted font-mono">
                     <span>{account.id}</span>
                     <span>{account.currency}</span>
                     <span>{account.timezoneName}</span>
@@ -195,6 +201,12 @@ export function Step2AccountPage({
               );
             })}
           </div>
+        )}
+
+        {showAccountHint && (
+          <p className="mt-1 text-xs font-medium text-amber-700">
+            Selecione uma conta de anúncios da Meta ativa para continuar.
+          </p>
         )}
       </section>
 
@@ -319,6 +331,12 @@ export function Step2AccountPage({
               );
             })}
           </div>
+        )}
+
+        {showPageHint && (
+          <p className="mt-1 text-xs font-medium text-amber-700">
+            Selecione uma Página do Facebook para vincular à campanha.
+          </p>
         )}
       </section>
 
