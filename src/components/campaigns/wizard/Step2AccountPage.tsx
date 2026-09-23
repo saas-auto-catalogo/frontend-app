@@ -40,6 +40,8 @@ export interface Step2AccountPageProps {
   onReloadAccounts: () => void;
   onReloadPages: () => void;
   onReloadForms: () => void;
+  onConnectMeta?: () => void;
+  isConnectingMeta?: boolean;
 }
 
 const E164_HINT = 'Formato E.164: +55 (DDD) + número';
@@ -66,6 +68,8 @@ export function Step2AccountPage({
   onReloadAccounts,
   onReloadPages,
   onReloadForms,
+  onConnectMeta,
+  isConnectingMeta = false,
 }: Step2AccountPageProps) {
   const selectedPage = pages.find((page) => page.id === pageId);
   const hasNoAccounts = !accountsLoading && !accountsError && accounts.length === 0;
@@ -111,12 +115,16 @@ export function Step2AccountPage({
         {accountsError && (
           <div className="flex flex-col gap-2 p-3 rounded-lg border border-surface-border bg-surface-muted text-sm">
             <p className="text-typography-body">{accountsError}</p>
-            <a
-              href="/meta/callback"
-              className="text-brand-primary font-semibold underline text-xs flex items-center gap-1 w-fit"
-            >
-              Vincular seus ativos Meta (reautenticar) <ExternalLink className="w-3 h-3" />
-            </a>
+            {onConnectMeta ? (
+              <button
+                type="button"
+                onClick={onConnectMeta}
+                disabled={isConnectingMeta}
+                className="text-brand-primary font-semibold underline text-xs flex items-center gap-1 w-fit hover:text-brand-primaryHover disabled:opacity-50"
+              >
+                {isConnectingMeta ? 'Conectando à Meta...' : 'Vincular seus ativos Meta (reautenticar)'} <ExternalLink className="w-3 h-3" />
+              </button>
+            ) : null}
           </div>
         )}
 
@@ -126,17 +134,18 @@ export function Step2AccountPage({
               Nenhuma conta de anúncios encontrada. Vincule seus ativos Meta para começar a
               anunciar.
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              icon={<Store className="w-4 h-4" />}
-              onClick={() => {
-                window.location.href = '/meta/callback';
-              }}
-            >
-              Vincular Conta Meta
-            </Button>
+            {onConnectMeta ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                icon={<Store className="w-4 h-4" />}
+                loading={isConnectingMeta}
+                onClick={onConnectMeta}
+              >
+                Vincular Conta Meta
+              </Button>
+            ) : null}
           </div>
         )}
 
@@ -214,12 +223,16 @@ export function Step2AccountPage({
         {pagesError && (
           <div className="flex flex-col gap-2 p-3 rounded-lg border border-surface-border bg-surface-muted text-sm">
             <p className="text-typography-body">{pagesError}</p>
-            <a
-              href="/meta/callback"
-              className="text-brand-primary font-semibold underline text-xs"
-            >
-              Reautenticar com a Meta
-            </a>
+            {onConnectMeta ? (
+              <button
+                type="button"
+                onClick={onConnectMeta}
+                disabled={isConnectingMeta}
+                className="text-brand-primary font-semibold underline text-xs flex items-center gap-1 w-fit hover:text-brand-primaryHover disabled:opacity-50"
+              >
+                {isConnectingMeta ? 'Conectando à Meta...' : 'Reautenticar com a Meta'} <ExternalLink className="w-3 h-3" />
+              </button>
+            ) : null}
           </div>
         )}
 
@@ -228,17 +241,18 @@ export function Step2AccountPage({
             <p className="text-sm text-typography-muted">
               Nenhuma página encontrada para esta conta.
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              icon={<Globe className="w-4 h-4" />}
-              onClick={() => {
-                window.location.href = '/meta/callback';
-              }}
-            >
-              Vincular Página
-            </Button>
+            {onConnectMeta ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                icon={<Globe className="w-4 h-4" />}
+                loading={isConnectingMeta}
+                onClick={onConnectMeta}
+              >
+                Vincular Página
+              </Button>
+            ) : null}
           </div>
         )}
 
