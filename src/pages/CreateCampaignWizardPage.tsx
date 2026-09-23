@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Rocket } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Rocket, CheckCircle2, X } from 'lucide-react';
 import { Sidebar } from '../components/layout/Sidebar.js';
 import { Header } from '../components/layout/Header.js';
 import { Button } from '../components/ui/Button.js';
 import { useAuth } from '../context/AuthContext.js';
 import { useWorkspace } from '../hooks/useWorkspace.js';
 import { campaignService, validateWizardTransition } from '../services/api/campaignService.js';
-import { metaIntegrationService } from '../services/api/metaIntegrationService.js';
+import { metaIntegrationService, saveOAuthReturnTo } from '../services/api/metaIntegrationService.js';
 import { vehicleService, Vehicle } from '../services/api/vehicleService.js';
 import type {
   CampaignWizardState,
@@ -62,10 +62,17 @@ function getUserInitials(name: string): string {
 
 export function CreateCampaignWizardPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { workspaceId, workspaceName } = useWorkspace();
 
   const [state, setState] = useState<CampaignWizardState>(INITIAL_STATE);
+  const [oauthSuccessMessage, setOauthSuccessMessage] = useState<string | null>(() => {
+    const navState = location.state as { metaOAuthResult?: 'success'; message?: string } | null;
+    return navState?.metaOAuthResult === 'success'
+      ? navState.message ?? 'Conta Meta vinculada com sucesso.'
+      : null;
+  });
   const [accounts, setAccounts] = useState<MetaAdAccountItem[]>([]);
   const [pages, setPages] = useState<MetaPageItem[]>([]);
   const [leadForms, setLeadForms] = useState<MetaLeadGenFormItem[]>([]);
@@ -91,6 +98,9 @@ export function CreateCampaignWizardPage() {
     if (!workspaceId) return;
     setConnectingMeta(true);
     try {
+      // Preserva a rota de origem para o callback OAuth devolver o lojista a
+      // este wizard (e não ao Dashboard) após concluir a autenticação na Meta.
+      saveOAuthReturnTo(`${window.location.pathname}${window.location.search}`);
       const { authUrl } = await metaIntegrationService.getAuthUrl(workspaceId);
       window.location.href = authUrl;
     } catch (err: unknown) {
@@ -123,7 +133,14 @@ export function CreateCampaignWizardPage() {
     setAccountsError(null);
     try {
       const result = await campaignService.listAdAccounts();
-      setAccounts(result.items ?? []);
+      const items = result.items ?? [];
+      setAccounts(items);
+      // Ao retornar do OAuth (ou recarregar com token novo), seleciona
+      // automaticamente a conta padrão quando houver apenas uma conta ativa.
+      const active = items.filter((account) => account.accountStatus === 1);
+      if (active.length === 1) {
+        setState((prev) => (prev.adAccountId ? prev : { ...prev, adAccountId: active[0].id }));
+      }
     } catch (error: any) {
       setAccounts([]);
       setAccountsError(error?.message || 'Não foi possível carregar as contas de anúncios.');
@@ -391,6 +408,21 @@ export function CreateCampaignWizardPage() {
               Cancelar e voltar
             </Button>
           </div>
+
+          {oauthSuccessMessage ? (
+            <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+              <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-green-600" />
+              <div className="flex-1">{oauthSuccessMessage}</div>
+              <button
+                type="button"
+                onClick={() => setOauthSuccessMessage(null)}
+                className="shrink-0 text-current opacity-60 hover:opacity-100 transition-opacity"
+                aria-label="Fechar aviso"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : null}
 
           <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
             <WizardStepIndicator

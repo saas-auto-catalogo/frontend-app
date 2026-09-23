@@ -1,6 +1,7 @@
 import { env } from '../../config/env.js';
 import { ApiError } from '../../types/api.js';
 import { authTokenStore } from '../auth/authTokenStore.js';
+import { metaSessionStore } from '../auth/metaSessionStore.js';
 
 export interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -39,6 +40,18 @@ export class HttpClient {
   private isAuthEndpoint(endpoint: string): boolean {
     const normalized = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     return AUTH_ENDPOINTS.some((path) => normalized === path || normalized.startsWith(`${path}?`));
+  }
+
+  private isMetaEndpoint(endpoint: string): boolean {
+    const normalized = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    return normalized.includes('/meta/') || normalized.includes('/integrations/meta/');
+  }
+
+  private resolveMetaSessionToken(tenantId: string): string | null {
+    // `default-tenant` é apenas o placeholder do cliente: só um workspaceId
+    // real (ou o workspace corrente) gera chave segregada no metaSessionStore.
+    const workspaceId = tenantId && tenantId !== 'default-tenant' ? tenantId : null;
+    return metaSessionStore.getMetaSessionToken(workspaceId);
   }
 
   private resolveAuthToken(explicitToken?: string): string | undefined {
@@ -83,6 +96,16 @@ export class HttpClient {
       headers.set('Authorization', `Bearer ${resolvedToken}`);
     }
 
+    // Injeção transparente do token de sessão Meta nos endpoints da integração:
+    // endpoints `/meta/*` e `/integrations/meta/*` enviam `x-meta-session-token`
+    // a partir do metaSessionStore do workspace corrente.
+    if (this.isMetaEndpoint(endpoint) && !headers.has('x-meta-session-token')) {
+      const metaSessionToken = this.resolveMetaSessionToken(tenantId);
+      if (metaSessionToken) {
+        headers.set('x-meta-session-token', metaSessionToken);
+      }
+    }
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
 
@@ -107,6 +130,12 @@ export class HttpClient {
         const errorMessage = this.parseErrorMessage(responseData, response.status);
         const errorCode = responseData?.error?.code || `HTTP_${response.status}`;
         const apiError = new ApiError(errorMessage, response.status, errorCode, responseData);
+
+        // 401 em endpoints Meta (ex.: MetaTokenUnavailableError) indica sessão
+        // Meta expirada/inválida: limpa o token local para não reenviá-lo.
+        if (response.status === 401 && this.isMetaEndpoint(endpoint)) {
+          metaSessionStore.clearMetaSessionToken();
+        }
 
         if (
           response.status === 401 &&
