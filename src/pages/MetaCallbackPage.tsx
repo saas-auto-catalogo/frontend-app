@@ -18,11 +18,15 @@ import { useAuth } from '../context/AuthContext.js';
 import {
   getMetaOAuthRedirectUri,
   metaIntegrationService,
+  peekOAuthReturnTo,
+  consumeOAuthReturnTo,
   type MetaBusinessAccount,
   type MetaCatalogItem,
   type MetaCallbackResponse,
   type SelectCatalogResponse,
 } from '../services/api/metaIntegrationService.js';
+import { dashboardService } from '../services/api/dashboardService.js';
+import { metaSessionStore } from '../services/auth/metaSessionStore.js';
 import { ApiError } from '../types/api.js';
 
 type Phase =
@@ -94,6 +98,7 @@ export function MetaCallbackPage() {
   const [phase, setPhase] = useState<Phase>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [callbackData, setCallbackData] = useState<MetaCallbackResponse | null>(null);
+  const [returnTo, setReturnTo] = useState<string>(() => peekOAuthReturnTo('/'));
 
   const [selectedCatalogId, setSelectedCatalogId] = useState<string | null>(null);
   const [wantCreateNew, setWantCreateNew] = useState(false);
@@ -141,10 +146,42 @@ export function MetaCallbackPage() {
     }
 
     let cancelled = false;
-    void runCallback(code, state).then((res) => {
+    void runCallback(code, state).then(async (res) => {
       if (cancelled) return;
+
+      setReturnTo(peekOAuthReturnTo('/'));
+
       if (res.ok) {
         const response = res.data;
+
+        // Persistência resiliente do metaSessionToken por workspace (segregado
+        // por tenant) para que as chamadas `/api/v1/meta/*` reenviem o cabeçalho
+        // `x-meta-session-token` ao voltar para o fluxo de campanhas.
+        metaSessionStore.setMetaSessionToken(response.workspaceId, response.metaSessionToken);
+
+        // Se o lojista veio do wizard de campanhas e o workspace já possui um
+        // catálogo vinculado, segue direto para a criação da campanha, sem
+        // prendê-lo na tela de seleção/criação de catálogo.
+        const resolvedReturnTo = peekOAuthReturnTo('/');
+        if (resolvedReturnTo && resolvedReturnTo !== '/' && resolvedReturnTo.startsWith('/campaigns/new')) {
+          try {
+            const existingCatalogs = await dashboardService.listMetaCatalogs(response.workspaceId);
+            if (existingCatalogs.length > 0) {
+              consumeOAuthReturnTo();
+              navigate(resolvedReturnTo, {
+                replace: true,
+                state: {
+                  metaOAuthResult: 'success',
+                  message: 'Conta Meta vinculada com sucesso. Selecione os ativos para anunciar.',
+                },
+              });
+              return;
+            }
+          } catch {
+            // Sem sinal claro de catálogo vinculado: segue para seleção/criação.
+          }
+        }
+
         setCallbackData(response);
         setSelectedBusinessId(response.businesses[0]?.id ?? '');
         setCatalogNameInput(response.suggestedCatalogName || '');
@@ -157,16 +194,26 @@ export function MetaCallbackPage() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoading, isAuthenticated, searchParams]);
+  }, [isAuthLoading, isAuthenticated, searchParams, navigate]);
 
   useEffect(() => {
     if (phase !== 'success' || !result) return;
     const timer = window.setTimeout(() => {
-      redirectToDashboard({
-        metaOAuthResult: 'success',
-        tab: 'meta-feed',
-        message: `Catálogo "${result.catalogName}" vinculado à Meta (ID ${result.catalogId}).`,
-      });
+      const resolvedReturnTo = peekOAuthReturnTo('/');
+      const message = `Catálogo "${result.catalogName}" vinculado à Meta (ID ${result.catalogId}).`;
+      if (resolvedReturnTo && resolvedReturnTo !== '/') {
+        consumeOAuthReturnTo();
+        navigate(resolvedReturnTo, {
+          replace: true,
+          state: { metaOAuthResult: 'success', message },
+        });
+      } else {
+        redirectToDashboard({
+          metaOAuthResult: 'success',
+          tab: 'meta-feed',
+          message,
+        });
+      }
     }, 2200);
     return () => window.clearTimeout(timer);
   }, [phase, result]);
@@ -294,9 +341,20 @@ export function MetaCallbackPage() {
               <Button
                 variant="primary"
                 icon={<RefreshCw className="w-4 h-4" />}
-                onClick={() => redirectToDashboard({ metaOAuthResult: 'error', tab: 'meta-feed', message: errorMessage ?? '' })}
+                onClick={() => {
+                  const resolvedReturnTo = peekOAuthReturnTo('/');
+                  if (resolvedReturnTo && resolvedReturnTo !== '/') {
+                    consumeOAuthReturnTo();
+                    navigate(resolvedReturnTo, {
+                      replace: true,
+                      state: { metaOAuthResult: 'error', message: errorMessage ?? '' },
+                    });
+                  } else {
+                    redirectToDashboard({ metaOAuthResult: 'error', tab: 'meta-feed', message: errorMessage ?? '' });
+                  }
+                }}
               >
-                Voltar ao Dashboard
+                {returnTo && returnTo !== '/' ? 'Voltar para onde estava' : 'Voltar ao Dashboard'}
               </Button>
             </div>
           )}
@@ -460,7 +518,9 @@ export function MetaCallbackPage() {
                 <p className="font-mono text-xs mt-1">#{result.catalogId}</p>
               </div>
               <p className="text-xs text-typography-muted">
-                Redirecionando para o Dashboard na aba Feed Meta DAA...
+                {returnTo && returnTo !== '/'
+                  ? 'Redirecionando para continuar o fluxo de campanhas...'
+                  : 'Redirecionando para o Dashboard na aba Feed Meta DAA...'}
               </p>
             </div>
           )}

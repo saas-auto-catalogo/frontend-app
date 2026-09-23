@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { authService, type RegisterOptions } from '../services/api/authService.js';
 import { authTokenStore } from '../services/auth/authTokenStore.js';
+import { metaSessionStore } from '../services/auth/metaSessionStore.js';
 import type { AuthUser, AuthSession, RegisterPayload, UpdateOnboardingPayload } from '../types/auth.js';
 import { ApiError } from '../types/api.js';
 
@@ -45,6 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authTokenStore.setAccessToken(null);
     setAccessToken(null);
     setUser(null);
+    metaSessionStore.clearAllMetaSessionTokens();
+  }, []);
+
+  const commitUser = useCallback((next: AuthUser | null) => {
+    setUser(next);
+    metaSessionStore.setCurrentWorkspace(
+      next?.workspaceId ?? next?.memberships?.[0]?.workspaceId ?? null,
+    );
   }, []);
 
   useEffect(() => {
@@ -61,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccessToken(refreshResult.accessToken);
 
         const meResult = await authService.getMe();
-        setUser(normalizeUser(meResult.user));
+        commitUser(normalizeUser(meResult.user));
       } catch {
         clearSession();
       } finally {
@@ -70,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     void bootstrap();
-  }, [clearSession]);
+  }, [clearSession, commitUser]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthSession> => {
     const result = await authService.login(email, password);
@@ -79,9 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const meResult = await authService.getMe();
     const normalized = normalizeUser(meResult.user);
-    setUser(normalized);
+    commitUser(normalized);
     return { user: normalized, billing: result.billing ?? null };
-  }, []);
+  }, [commitUser]);
 
   const register = useCallback(async (payload: RegisterPayload, options?: RegisterOptions): Promise<AuthSession> => {
     const result = await authService.register(payload, options);
@@ -90,37 +99,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const meResult = await authService.getMe();
     const normalized = normalizeUser(meResult.user);
-    setUser(normalized);
+    commitUser(normalized);
     return { user: normalized, billing: result.billing ?? null };
-  }, []);
+  }, [commitUser]);
 
   const updateOnboarding = useCallback(async (payload: UpdateOnboardingPayload) => {
     const meResult = await authService.patchOnboarding(payload);
     const normalized = normalizeUser(meResult.user);
-    setUser(normalized);
+    commitUser(normalized);
     return normalized;
-  }, []);
+  }, [commitUser]);
 
   const updateProfile = useCallback(
     async (payload: { name?: string; avatarUrl?: string | null }): Promise<AuthUser> => {
       const meResult = await authService.patchMe(payload);
       const normalized = normalizeUser(meResult.user);
-      setUser(normalized);
+      commitUser(normalized);
       return normalized;
     },
-    [],
+    [commitUser],
   );
 
   const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
     try {
       const meResult = await authService.getMe();
       const normalized = normalizeUser(meResult.user);
-      setUser(normalized);
+      commitUser(normalized);
       return normalized;
     } catch {
       return null;
     }
-  }, []);
+  }, [commitUser]);
 
   const logout = useCallback(async () => {
     try {
