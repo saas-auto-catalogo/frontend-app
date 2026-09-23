@@ -237,21 +237,43 @@ export function Step2AccountPage({
         )}
 
         {hasNoPages && (
-          <div className="p-4 rounded-lg border border-surface-border bg-surface-muted">
-            <p className="text-sm text-typography-muted">
-              Nenhuma página encontrada para esta conta.
+          <div className="p-4 rounded-lg border border-amber-200 bg-amber-50">
+            <p className="text-sm text-amber-800 font-medium">
+              {accounts.length > 0
+                ? 'Sua conta está conectada, mas nenhuma Página do Facebook foi encontrada.'
+                : 'Nenhuma página encontrada para esta conta.'}
             </p>
+            {accounts.length > 0 && (
+              <p className="mt-1 text-xs text-amber-700">
+                Se você se conectou à Meta antes desta atualização, o token atual pode não
+                incluir as permissões necessárias para exibir suas páginas. Reautentique com a
+                Meta para conceder as novas permissões.
+              </p>
+            )}
             {onConnectMeta ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                icon={<Globe className="w-4 h-4" />}
-                loading={isConnectingMeta}
-                onClick={onConnectMeta}
-              >
-                Vincular Página
-              </Button>
+              accounts.length > 0 ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="mt-3"
+                  icon={<ExternalLink className="w-3.5 h-3.5" />}
+                  loading={isConnectingMeta}
+                  onClick={onConnectMeta}
+                >
+                  {isConnectingMeta ? 'Conectando à Meta...' : 'Reautenticar com a Meta'}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  icon={<Globe className="w-4 h-4" />}
+                  loading={isConnectingMeta}
+                  onClick={onConnectMeta}
+                >
+                  Vincular Página
+                </Button>
+              )
             ) : null}
           </div>
         )}
