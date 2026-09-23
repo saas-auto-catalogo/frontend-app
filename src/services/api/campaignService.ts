@@ -7,6 +7,7 @@ import type {
   MetaAdAccountItem,
   MetaLeadGenFormItem,
   MetaPageItem,
+  TargetingGeo,
 } from '../../types/campaign.js';
 
 export const MIN_DAILY_BUDGET_CENTS = 1500; // R$ 15,00/dia
@@ -199,6 +200,14 @@ export interface BuildCampaignPayloadInput {
   endDate?: string;
 }
 
+export function buildTargetingGeo(radiusKm: number): TargetingGeo | undefined {
+  const radius = Number(radiusKm);
+  if (!Number.isFinite(radius) || radius <= 0) {
+    return undefined;
+  }
+  return { customLocations: [] };
+}
+
 export function buildCampaignPayload(input: BuildCampaignPayloadInput): CreateCampaignInput {
   if (!isValidAdAccountId(input.adAccountId)) {
     throw new Error('Selecione uma conta de anúncios da Meta ativa para continuar.');
@@ -208,6 +217,7 @@ export function buildCampaignPayload(input: BuildCampaignPayloadInput): CreateCa
   }
 
   const { dailyBudget, lifetimeBudget } = buildBudgetPayload(input.dailyBudgetReais);
+  const targetingGeo = buildTargetingGeo(input.radiusKm);
 
   return {
     name: input.campaignName || input.name,
@@ -223,16 +233,7 @@ export function buildCampaignPayload(input: BuildCampaignPayloadInput): CreateCa
     headlineTemplate: input.headlineTemplate,
     messageTemplate: input.messageTemplate,
     whatsappGreeting: input.whatsappGreeting,
-    targetingGeo: {
-      customLocations: [
-        {
-          latitude: 0,
-          longitude: 0,
-          radius: input.radiusKm,
-          distanceUnit: 'kilometer',
-        },
-      ],
-    },
+    ...(targetingGeo ? { targetingGeo } : {}),
   };
 }
 
