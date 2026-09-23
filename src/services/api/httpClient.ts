@@ -47,11 +47,14 @@ export class HttpClient {
     return normalized.includes('/meta/') || normalized.includes('/integrations/meta/');
   }
 
-  private resolveMetaSessionToken(tenantId: string): string | null {
+  private resolveWorkspaceId(tenantId: string): string | null {
     // `default-tenant` é apenas o placeholder do cliente: só um workspaceId
     // real (ou o workspace corrente) gera chave segregada no metaSessionStore.
-    const workspaceId = tenantId && tenantId !== 'default-tenant' ? tenantId : null;
-    return metaSessionStore.getMetaSessionToken(workspaceId);
+    return tenantId && tenantId !== 'default-tenant' ? tenantId : null;
+  }
+
+  private resolveMetaSessionToken(tenantId: string): string | null {
+    return metaSessionStore.getMetaSessionToken(this.resolveWorkspaceId(tenantId));
   }
 
   private resolveAuthToken(explicitToken?: string): string | undefined {
@@ -131,10 +134,16 @@ export class HttpClient {
         const errorCode = responseData?.error?.code || `HTTP_${response.status}`;
         const apiError = new ApiError(errorMessage, response.status, errorCode, responseData);
 
-        // 401 em endpoints Meta (ex.: MetaTokenUnavailableError) indica sessão
-        // Meta expirada/inválida: limpa o token local para não reenviá-lo.
+        // Guardrail do 401 Meta: só remove o token local quando ele foi
+        // de fato enviado e a sessão foi rejeitada como inválida/expirada.
+        // Um 401 de "token não fornecido" (cabeçalho ausente) — ou um erro
+        // genérico — não pode destruir um token legítimo já armazenado.
         if (response.status === 401 && this.isMetaEndpoint(endpoint)) {
-          metaSessionStore.clearMetaSessionToken();
+          const metaTokenSent = headers.has('x-meta-session-token');
+          const rejectedSession = /inv[áa]lid|expir/i.test(errorMessage);
+          if (metaTokenSent && rejectedSession) {
+            metaSessionStore.clearMetaSessionToken(this.resolveWorkspaceId(tenantId));
+          }
         }
 
         if (

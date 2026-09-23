@@ -1,12 +1,24 @@
 const STORAGE_PREFIX = 'ds_meta_session_';
+const CURRENT_WORKSPACE_KEY = 'ds_meta_current_workspace';
 
-let currentWorkspaceId: string | null = null;
+function readPersistedWorkspace(): string | null {
+  try {
+    return window.localStorage.getItem(CURRENT_WORKSPACE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+// Sobrevive a recarregamentos de página: restaura o workspace corrente a partir
+// do localStorage antes mesmo do bootstrap assíncrono do AuthContext concluir.
+let currentWorkspaceId: string | null = readPersistedWorkspace();
 
 export interface MetaSessionStore {
   getMetaSessionToken(workspaceId?: string | null): string | null;
   setMetaSessionToken(workspaceId: string, token: string | null): void;
   clearMetaSessionToken(workspaceId?: string | null): void;
   setCurrentWorkspace(workspaceId: string | null): void;
+  getCurrentWorkspace(): string | null;
   clearAllMetaSessionTokens(): void;
 }
 
@@ -27,28 +39,27 @@ export const metaSessionStore: MetaSessionStore = {
         if (direct !== null) {
           return direct;
         }
+      }
 
-        // Fallback resiliente: se a chave exata do workspace não for
-        // encontrada (pequeno descasamento de identificadores de tenant),
-        // percorre as chaves `ds_meta_session_*`. O fallback só é aplicado
-        // quando há exatamente UM token armazenado — com múltiplos tenants
-        // emissários o resultado seria ambíguo e poderia vazar tokens entre
-        // workspaces.
-        let fallbackToken: string | null = null;
-        let fallbackCount = 0;
-        for (let i = 0; i < window.localStorage.length; i += 1) {
-          const key = window.localStorage.key(i);
-          if (key && key.startsWith(STORAGE_PREFIX)) {
-            const value = window.localStorage.getItem(key);
-            if (value !== null) {
-              fallbackToken = value;
-              fallbackCount += 1;
-            }
+      // Fallback resiliente e incondicional: se houver exatamente UM token
+      // armazenado, utiliza-o mesmo quando `resolved` for null (código executando
+      // antes do bootstrap do AuthContext/uso do tenant). Com múltiplos tenants
+      // emissários o resultado seria ambíguo e poderia vazar tokens entre
+      // workspaces — nesse caso o fallback é suprimido.
+      let fallbackToken: string | null = null;
+      let fallbackCount = 0;
+      for (let i = 0; i < window.localStorage.length; i += 1) {
+        const key = window.localStorage.key(i);
+        if (key && key.startsWith(STORAGE_PREFIX)) {
+          const value = window.localStorage.getItem(key);
+          if (value !== null) {
+            fallbackToken = value;
+            fallbackCount += 1;
           }
         }
-        if (fallbackCount === 1) {
-          return fallbackToken;
-        }
+      }
+      if (fallbackCount === 1) {
+        return fallbackToken;
       }
     } catch {
       // localStorage indisponível (modo privado/SSR).
@@ -62,6 +73,10 @@ export const metaSessionStore: MetaSessionStore = {
         window.localStorage.removeItem(storageKey(workspaceId));
       } else {
         window.localStorage.setItem(storageKey(workspaceId), token);
+        // Gravar um token vincula o workspace à sessão corrente e persiste a
+        // identificação para recarregamentos e redirecionamentos.
+        currentWorkspaceId = workspaceId;
+        window.localStorage.setItem(CURRENT_WORKSPACE_KEY, workspaceId);
       }
     } catch {
       // localStorage indisponível (modo privado/SSR): segue sem persistência.
@@ -80,6 +95,19 @@ export const metaSessionStore: MetaSessionStore = {
 
   setCurrentWorkspace(workspaceId: string | null): void {
     currentWorkspaceId = workspaceId;
+    try {
+      if (workspaceId == null) {
+        window.localStorage.removeItem(CURRENT_WORKSPACE_KEY);
+      } else {
+        window.localStorage.setItem(CURRENT_WORKSPACE_KEY, workspaceId);
+      }
+    } catch {
+      // localStorage indisponível (modo privado/SSR).
+    }
+  },
+
+  getCurrentWorkspace(): string | null {
+    return currentWorkspaceId;
   },
 
   clearAllMetaSessionTokens(): void {
@@ -94,6 +122,7 @@ export const metaSessionStore: MetaSessionStore = {
       for (const key of keys) {
         window.localStorage.removeItem(key);
       }
+      window.localStorage.removeItem(CURRENT_WORKSPACE_KEY);
     } catch {
       // ignora erros de storage.
     }

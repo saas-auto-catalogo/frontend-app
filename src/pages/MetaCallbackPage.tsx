@@ -158,6 +158,9 @@ export function MetaCallbackPage() {
         // por tenant) para que as chamadas `/api/v1/meta/*` reenviem o cabeçalho
         // `x-meta-session-token` ao voltar para o fluxo de campanhas.
         metaSessionStore.setMetaSessionToken(response.workspaceId, response.metaSessionToken);
+        // Sincroniza explicitamente o workspace corrente (G3): garante que o
+        // token recém-gravado seja resolvido mesmo antes do bootstrap do AuthContext.
+        metaSessionStore.setCurrentWorkspace(response.workspaceId);
 
         // Se o lojista veio do wizard de campanhas e o workspace já possui um
         // catálogo vinculado, segue direto para a criação da campanha, sem
