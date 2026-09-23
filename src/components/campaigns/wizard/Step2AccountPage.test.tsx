@@ -264,4 +264,54 @@ describe('Step2AccountPage: erro ao carregar formulários instantâneos', () => 
       screen.queryByRole('button', { name: /Reautenticar com a Meta/i }),
     ).not.toBeInTheDocument();
   });
+
+  it('mostra UI amigável de permissão e botão "Recarregar lista" para página sem permissão', async () => {
+    const onReloadForms = vi.fn();
+    const onConnectMeta = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Step2AccountPage
+        {...leadFormProps}
+        formsError="Falha na Meta Marketing API: (#200) Requires the leads permission for the page"
+        onReloadForms={onReloadForms}
+        onConnectMeta={onConnectMeta}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Não foi possível listar os formulários instantâneos desta página/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Verifique se a conta conectada administra esta página/i),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByRole('button', { name: /Reautenticar com a Meta/i }),
+    ).not.toBeInTheDocument();
+
+    const reloadButton = screen.getByRole('button', { name: /Recarregar lista/i });
+    await user.click(reloadButton);
+    expect(onReloadForms).toHaveBeenCalledTimes(1);
+    expect(onConnectMeta).not.toHaveBeenCalled();
+  });
+
+  it('mantém CTA de reautenticação para erro #190 não resolvido (sem permissão de página)', () => {
+    const onConnectMeta = vi.fn();
+
+    render(
+      <Step2AccountPage
+        {...leadFormProps}
+        formsError="(#190) This method must be called with a Page Access Token"
+        onConnectMeta={onConnectMeta}
+      />,
+    );
+
+    expect(
+      screen.queryByText(/Token de acesso Meta não fornecido/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Verifique se a conta conectada administra esta página/i),
+    ).toBeInTheDocument();
+  });
 });

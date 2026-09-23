@@ -17,6 +17,7 @@ import type {
 } from '../../../types/campaign.js';
 import { Badge } from '../../ui/Badge.js';
 import { Button } from '../../ui/Button.js';
+import { classifyMetaFormError } from './metaFormError.js';
 
 export interface Step2AccountPageProps {
   destinationType: CampaignDestinationType;
@@ -77,6 +78,7 @@ export function Step2AccountPage({
   const hasNoPages = !pagesLoading && !pagesError && pages.length === 0;
   const activeForms = leadForms.filter((form) => form.status === 'ACTIVE');
   const hasNoForms = !formsLoading && leadForms.length === 0;
+  const formErrorKind = classifyMetaFormError(formsError ?? '');
   const showAccountHint =
     !accountsLoading && !accountsError && accounts.length > 0 && !(
       selectedAccount && selectedAccount.accountStatus === 1
@@ -398,10 +400,30 @@ export function Step2AccountPage({
           {formsError && (
             <div className="flex flex-col gap-2 p-3 rounded-lg border border-surface-border bg-surface-muted text-sm">
               <p className="text-status-error-text font-medium">
-                Não foi possível carregar os formulários instantâneos desta página.
+                {formErrorKind === 'permission'
+                  ? 'Não foi possível listar os formulários instantâneos desta página.'
+                  : 'Não foi possível carregar os formulários instantâneos desta página.'}
               </p>
               <p className="text-xs text-typography-muted">{formsError}</p>
-              {onConnectMeta ? (
+              {formErrorKind === 'permission' ? (
+                <>
+                  <p className="text-xs text-typography-muted">
+                    Verifique se a conta conectada administra esta página e possui acesso aos
+                    formulários de lead. Após conceder a permissão, recarregue a lista.
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<RefreshCw className="w-3.5 h-3.5" />}
+                      onClick={onReloadForms}
+                      disabled={formsLoading || isConnectingMeta}
+                    >
+                      Recarregar lista
+                    </Button>
+                  </div>
+                </>
+              ) : onConnectMeta ? (
                 <button
                   type="button"
                   onClick={onConnectMeta}
