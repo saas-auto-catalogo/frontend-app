@@ -4,6 +4,7 @@ import {
   applyHeadlineTemplate,
   buildBudgetPayload,
   buildCampaignPayload,
+  buildTargetingGeo,
   isValidAdAccountId,
   normalizeWhatsappNumber,
   validateEndDate,
@@ -244,8 +245,50 @@ describe('Campaign Wizard: conversão de orçamento e payload da API', () => {
 
     expect(payload.dailyBudget).toBe(3000);
     expect(payload.whatsappNumber).toBe('+5511987654321');
-    expect(payload.targetingGeo?.customLocations[0].radius).toBe(50);
+    expect(payload.targetingGeo?.customLocations).toEqual([]);
+    expect(payload.targetingGeo?.customLocations?.some((l) => l.latitude === 0 && l.longitude === 0)).toBe(false);
     expect(payload.headlineTemplate).toContain('{{make}}');
+  });
+
+  it('não envia coordenadas fictícias (0,0) no targeting geo', () => {
+    const payload = buildCampaignPayload({
+      name: 'Campanha Corolla',
+      destinationType: 'WHATSAPP_MESSAGE',
+      adAccountId: 'act_123456',
+      pageId: '1029384756',
+      whatsappNumber: '(11) 98765-4321',
+      dailyBudgetReais: 30,
+      radiusKm: 50,
+      campaignName: 'Corolla Oferta',
+      headlineTemplate: '{{make}} {{model}}',
+      messageTemplate: 'Vi este {{model}}.',
+      whatsappGreeting: 'Oi!',
+      startDate: '2026-01-01T10:00:00Z',
+    });
+
+    expect(payload.targetingGeo).toBeDefined();
+    expect(payload.targetingGeo?.customLocations.length).toBe(0);
+  });
+
+  it('omite targetingGeo quando o raio é inválido ou ausente', () => {
+    const base = {
+      name: 'Campanha Corolla',
+      destinationType: 'WHATSAPP_MESSAGE' as const,
+      adAccountId: 'act_123456',
+      pageId: '1029384756',
+      whatsappNumber: '(11) 98765-4321',
+      dailyBudgetReais: 30,
+      campaignName: 'Corolla Oferta',
+      headlineTemplate: '{{make}} {{model}}',
+      messageTemplate: 'Vi este {{model}}.',
+      whatsappGreeting: 'Oi!',
+      startDate: '2026-01-01T10:00:00Z',
+    };
+
+    expect(buildTargetingGeo(0)).toBeUndefined();
+    expect(buildTargetingGeo(-5)).toBeUndefined();
+    expect(buildTargetingGeo(Number.NaN)).toBeUndefined();
+    expect(buildCampaignPayload({ ...base, radiusKm: 0 }).targetingGeo).toBeUndefined();
   });
 
   it('rejeita payload sem adAccountId ou pageId válidos', () => {
