@@ -5,6 +5,7 @@ import { useSubscription } from '../../context/SubscriptionContext.js';
 import { getPostAuthPath } from '../../utils/auth.js';
 import { getSubscriptionGatePath, isActiveSubscription } from '../../utils/subscription.js';
 import { TrialBanner } from '../billing/TrialBanner.js';
+import { ImpersonationBanner } from './ImpersonationBanner.js';
 
 function AuthLoadingSpinner({ message = 'Carregando sessão...' }: { message?: string }) {
   return (
@@ -29,8 +30,14 @@ export function PrivateRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  return <Outlet />;
+  return (
+    <>
+      <ImpersonationBanner />
+      <Outlet />
+    </>
+  );
 }
+
 
 export function RequireActiveSubscription() {
   const { user } = useAuth();

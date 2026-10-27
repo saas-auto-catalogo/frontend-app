@@ -5,6 +5,7 @@ export interface AppConfig {
   isDev: boolean;
   isProd: boolean;
   marketingUrl: string;
+  backofficeUrl: string;
 }
 
 export const env: AppConfig = {
@@ -14,4 +15,6 @@ export const env: AppConfig = {
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,
   marketingUrl: import.meta.env.VITE_MARKETING_URL || 'https://drivesync.me',
+  backofficeUrl: import.meta.env.VITE_BACKOFFICE_URL || 'http://localhost:5174',
 };
+

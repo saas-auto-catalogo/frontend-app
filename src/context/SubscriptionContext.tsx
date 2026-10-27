@@ -14,6 +14,8 @@ import {
   type WorkspaceBilling,
   type SubscriptionStatus,
 } from '../services/api/billingService.js';
+import { env } from '../config/env.js';
+
 
 interface SubscriptionContextValue {
   billing: WorkspaceBilling | null;
@@ -87,11 +89,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setBilling(data);
       return data;
     } catch (err: unknown) {
+      if (env.enableMockFallback || user?.isImpersonated) {
+        const synthetic = createSuperAdminBilling(workspaceId);
+        setBilling(synthetic);
+        return synthetic;
+      }
       const message = err instanceof Error ? err.message : 'Erro ao carregar assinatura';
       setError(message);
       setBilling(null);
       return null;
     } finally {
+
       setIsLoadingState(false);
       setHasInitialized(true);
     }
