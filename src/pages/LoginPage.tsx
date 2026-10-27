@@ -7,14 +7,15 @@ import { useAuth } from '../context/AuthContext.js';
 import { useSubscription } from '../context/SubscriptionContext.js';
 import { ApiError } from '../types/api.js';
 import { isValidEmail } from '../utils/validation.js';
-import { resolvePostAuthNavigatePath } from '../utils/auth.js';
+import { resolvePostAuthNavigatePath } from '../utils/auth.js';
+import { env } from '../config/env.js';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const selectedPlan = searchParams.get('plan');
-  const { login } = useAuth();
+  const { login, startMockImpersonation } = useAuth();
   const { refetchBilling, setBilling } = useSubscription();
 
   const [email, setEmail] = useState('');
@@ -113,7 +114,26 @@ export function LoginPage() {
 
         <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
           Entrar
-        </Button>
+        </Button>
+
+        {env.enableMockFallback ? (
+          <div className="pt-2 border-t border-brand-border">
+            <button
+              type="button"
+              onClick={async () => {
+                await startMockImpersonation();
+                navigate('/', { replace: true });
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-red-50 hover:bg-red-100 px-4 py-2.5 text-sm font-semibold text-red-700 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            >
+              <span>🛡️</span>
+              <span>Acessar via Suporte (Ver Banner de Impersonation)</span>
+            </button>
+            <p className="mt-1.5 text-center text-xs text-typography-muted">
+              Ativa o modo de suporte técnico com banner vermelho persistente no topo.
+            </p>
+          </div>
+        ) : null}
 
         <p className="text-center text-sm text-typography-muted">
           Ainda não tem conta?{' '}

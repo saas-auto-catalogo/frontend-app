@@ -1,5 +1,7 @@
 import { httpClient } from './httpClient.js';
+import { env } from '../../config/env.js';
 import type { SyncStatus } from './dashboardService.js';
+
 
 export interface FeedConfigSummary {
   id: string;
@@ -79,9 +81,28 @@ function sleep(ms: number): Promise<void> {
 
 export const feedService = {
   async listFeeds(workspaceId: string): Promise<FeedConfigSummary[]> {
-    const response = await httpClient.get<FeedsListResponse>(`/workspaces/${workspaceId}/feeds`);
-    return response.feeds;
+    try {
+      const response = await httpClient.get<FeedsListResponse>(`/workspaces/${workspaceId}/feeds`);
+      return response.feeds;
+    } catch (err) {
+      if (env.enableMockFallback) {
+        return [
+          {
+            id: 'feed-1',
+            sourceType: 'AUTOCERTO',
+            feedUrl: 'https://xml.autocerto.com/cliente-demo.xml',
+            isActive: true,
+            lastSyncAt: new Date().toISOString(),
+            lastSyncStatus: 'SUCCESS',
+            lastSyncMessage: '48 veículos sincronizados com sucesso',
+            _count: { vehicles: 48 },
+          },
+        ];
+      }
+      throw err;
+    }
   },
+
 
   async validateUrl(workspaceId: string, url: string): Promise<ValidateFeedUrlResult> {
     return httpClient.post<ValidateFeedUrlResult>(

@@ -20,10 +20,12 @@ import { Card, CardContent, CardHeader } from '../../../components/ui/Card.js';
 import { Button } from '../../../components/ui/Button.js';
 import { useWorkspace } from '../../../hooks/useWorkspace.js';
 import { useSubscription } from '../../../context/SubscriptionContext.js';
+import { useAuth } from '../../../context/AuthContext.js';
 import {
   billingService,
   type InvoiceItem,
 } from '../../../services/api/billingService.js';
+
 import { formatCurrencyCents, formatDate, formatRelativeTime } from '../../../utils/format.js';
 import { ApiError } from '../../../types/api.js';
 
@@ -81,9 +83,11 @@ export function BillingSettingsTab() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isMockPortal = searchParams.get('mock_portal') === '1';
   const { role, workspaceId } = useWorkspace();
+  const { isImpersonated } = useAuth();
   const { billing, isLoading: billingLoading, refetchBilling } = useSubscription();
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
@@ -193,7 +197,20 @@ export function BillingSettingsTab() {
         </div>
       )}
 
+      {isImpersonated && (
+        <div className="p-3.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">Gerenciamento financeiro restrito em modo de suporte</p>
+            <p className="text-amber-800 mt-0.5">
+              A equipe de suporte técnico tem permissão apenas de visualização. Modificações contratuais e alterações de forma de pagamento devem ser realizadas pelo lojista titular.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Seção 1 — Assinatura Ativa & Ações */}
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -250,9 +267,11 @@ export function BillingSettingsTab() {
               icon={<ExternalLink className="w-3.5 h-3.5" />}
               onClick={() => void handleOpenPortal()}
               loading={isOpeningPortal}
+              disabled={isOpeningPortal || isImpersonated}
             >
               Gerenciar assinatura (Stripe)
             </Button>
+
             <Button
               variant="outline"
               size="sm"

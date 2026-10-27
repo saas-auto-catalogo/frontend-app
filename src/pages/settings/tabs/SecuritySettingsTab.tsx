@@ -1,15 +1,28 @@
-import { ShieldCheck, Lock, KeyRound } from 'lucide-react';
+import { ShieldCheck, Lock, KeyRound, ShieldAlert } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../../../components/ui/Card.js';
 import { Button } from '../../../components/ui/Button.js';
 import { useAuth } from '../../../context/AuthContext.js';
 
 export function SecuritySettingsTab() {
-  const { user } = useAuth();
+  const { user, isImpersonated } = useAuth();
   const mfaEnabled = user?.mfaEnabled ?? false;
 
   return (
     <div className="space-y-6">
+      {isImpersonated && (
+        <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-900 flex items-start gap-2.5">
+          <ShieldAlert className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">Ações de segurança bloqueadas em modo de suporte</p>
+            <p className="text-red-700 mt-0.5">
+              Por motivos de conformidade e segurança, a alteração de senhas e dados de credenciais não é permitida durante a sessão de impersonation.
+            </p>
+          </div>
+        </div>
+      )}
+
       <Card>
+
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-amber-50">

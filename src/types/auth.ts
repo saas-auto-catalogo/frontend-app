@@ -1,5 +1,12 @@
 import type { WorkspaceBilling } from '../services/api/billingService.js';
 
+export interface ImpersonationInfo {
+  isImpersonated: boolean;
+  impersonatedByUserId?: string;
+  impersonationReason?: string;
+  impersonationSessionId?: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -18,7 +25,12 @@ export interface AuthUser {
   createdAt?: string;
   onboardingCompleted?: boolean;
   onboardingStep?: number;
+  isImpersonated?: boolean;
+  impersonatedByUserId?: string;
+  impersonationReason?: string;
+  impersonationSessionId?: string;
 }
+
 
 export interface UpdateOnboardingPayload {
   onboardingStep?: number;

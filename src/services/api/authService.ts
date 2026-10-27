@@ -1,4 +1,5 @@
 import { httpClient } from './httpClient.js';
+import { env } from '../../config/env.js';
 import type {
   LoginResponse,
   MeResponse,
@@ -12,16 +13,58 @@ export interface RegisterOptions {
   plan?: 'trial';
 }
 
+const MOCK_USER = {
+  id: 'mock-owner-001',
+  email: 'admin@autocatalogo.com.br',
+  name: 'Revenda Auto Shopping Motors',
+  avatarUrl: null,
+  isSuperAdmin: false,
+  role: 'OWNER',
+  workspaceId: 'mock-ws-001',
+  onboardingCompleted: true,
+};
+
 export const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
-    return httpClient.post<LoginResponse>('/auth/login', { email, password }, { skipAuthRefresh: true });
+    try {
+      return await httpClient.post<LoginResponse>('/auth/login', { email, password }, { skipAuthRefresh: true });
+    } catch (error) {
+      if (env.enableMockFallback) {
+        return {
+          accessToken: 'mock_jwt_access_token',
+          expiresIn: 3600,
+          tokenType: 'Bearer',
+          user: {
+            ...MOCK_USER,
+            email: email || MOCK_USER.email,
+          },
+        };
+      }
+      throw error;
+    }
   },
 
   async register(payload: RegisterPayload, options?: RegisterOptions): Promise<LoginResponse> {
-    return httpClient.post<LoginResponse>('/auth/register', payload, {
-      skipAuthRefresh: true,
-      params: options?.plan ? { plan: options.plan } : undefined,
-    });
+    try {
+      return await httpClient.post<LoginResponse>('/auth/register', payload, {
+        skipAuthRefresh: true,
+        params: options?.plan ? { plan: options.plan } : undefined,
+      });
+    } catch (error) {
+      if (env.enableMockFallback) {
+        return {
+          accessToken: 'mock_jwt_access_token',
+          expiresIn: 3600,
+          tokenType: 'Bearer',
+          user: {
+            ...MOCK_USER,
+            email: payload.email,
+            name: payload.name,
+          },
+        };
+      }
+      throw error;
+    }
   },
 
   async refresh(): Promise<RefreshResponse> {
@@ -29,7 +72,14 @@ export const authService = {
   },
 
   async logout(): Promise<MessageResponse> {
-    return httpClient.post<MessageResponse>('/auth/logout');
+    try {
+      return await httpClient.post<MessageResponse>('/auth/logout');
+    } catch (error) {
+      if (env.enableMockFallback) {
+        return { message: 'Logout realizado' };
+      }
+      throw error;
+    }
   },
 
   async forgotPassword(email: string): Promise<MessageResponse> {
@@ -45,7 +95,14 @@ export const authService = {
   },
 
   async getMe(): Promise<MeResponse> {
-    return httpClient.get<MeResponse>('/auth/me');
+    try {
+      return await httpClient.get<MeResponse>('/auth/me');
+    } catch (error) {
+      if (env.enableMockFallback) {
+        return { user: MOCK_USER };
+      }
+      throw error;
+    }
   },
 
   async patchOnboarding(payload: UpdateOnboardingPayload): Promise<MeResponse> {
